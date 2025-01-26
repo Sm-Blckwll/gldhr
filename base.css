@@ -20,21 +20,24 @@ body {
 
 @keyframes ellipsis {
   0% {
-    content: "Loading";
+    content: "";
   }
-  33% {
-    content: "Loading.";
-  }
-  66% {
-    content: "Loading..";
+  50% {
+    content: ".";
   }
   100% {
-    content: "Loading...";
+    content: "..";
   }
 }
 
 .loading-text {
+  position: relative;
   display: inline-block;
+}
+
+.loading-text::after {
+  content: ".";
+  position: absolute;
   animation: ellipsis 1s steps(4, end) infinite;
 }
 

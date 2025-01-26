@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UK Golden Hour</title>
+  <title>Golden Hour</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
   <link rel="stylesheet" href="Control.OSMGeocoder.css" />
@@ -90,14 +90,13 @@
 
     async function getTimezoneFromCoords(lat, lng) {
       const response = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lng}`);
-
       const data = await response.json();
       return data.timeZone;
     }
 
     async function calculateGoldenHour() {
       
-      document.getElementById('result').innerHTML = 'Waiting for API<span class="loading-text">...</span>';
+      document.getElementById('result').innerHTML = 'Waiting for API<span class="loading-text">.</span>';
       
       let c = map.getCenter();
       let lat = parseFloat(c.lat.toFixed(4));
@@ -111,8 +110,8 @@
 
       const goldenHourStartFrom = moment(sunrise).tz(timeZone).format('HH:mm');
       const goldenHourStartTo = moment(sunrise).tz(timeZone).add(1, 'hour').format('HH:mm');
-      const goldenHourEndFrom = moment(sunset).tz(timeZone).format('HH:mm');
-      const goldenHourEndTo = moment(sunset).tz(timeZone).add(1, 'hour').format('HH:mm');
+      const goldenHourEndFrom = moment(sunset).tz(timeZone).subtract(1, 'hour').format('HH:mm');
+      const goldenHourEndTo = moment(sunset).tz(timeZone).format('HH:mm');
 
       
       document.getElementById('result').innerHTML = `
