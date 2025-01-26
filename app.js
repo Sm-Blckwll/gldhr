@@ -4,7 +4,7 @@ $(document).ready(function () {
     });
 
     $("#help").click(function () {
-        $("#theHelp").delay(100).fadeIn("fast");
+        $("#theHelp").delay(100).fadeToggle("fast");
     });
 });
 const mapOptions = {
