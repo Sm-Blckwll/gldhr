@@ -1,0 +1,41 @@
+.leaflet-control-geocoder a {
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  display: block;
+}
+
+.leaflet-control-geocoder {
+  box-shadow: 0 1px 7px #999;
+  background: #1f2530;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  border-radius: 2px;
+  -ms-border-radius: 2px;
+  -o-border-radius: 2px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+}
+
+.leaflet-control-geocoder a {
+  background-image: url(magnifying-glass-solid.svg);
+  background-size: 16px;
+}
+
+.leaflet-touch .leaflet-control-geocoder a {
+  width: 29px;
+  height: 29px;
+}
+
+.leaflet-control-geocoder .leaflet-control-geocoder-form,
+.leaflet-control-geocoder-expanded .leaflet-control-geocoder-toggle {
+  display: none;
+}
+
+.leaflet-control-geocoder-expanded .leaflet-control-geocoder-form {
+  display: block;
+  position: relative;
+}
+
+.leaflet-control-geocoder-expanded .leaflet-control-geocoder-form {
+  padding: 5px;
+}
