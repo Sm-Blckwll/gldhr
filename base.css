@@ -27,7 +27,7 @@ body {
   align-items: center;
   height: 100vh;
   width: 100vw;
-  background-color: #ffffffdc;
+  background-color: #ffffffec;
   z-index: 10000;
 }
 
@@ -104,35 +104,49 @@ body {
   font-style: normal;
 }
 
-.crosshairs:before, .crosshairs:after {
-  content: "";
+#mapContainer {
+  position: relative;
+  width: 100vw; 
+  height: 100vh; 
+  overflow: hidden;
+}
+
+.crosshairs {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 999;
   width: 27px;
   height: 27px;
-  z-index: 999;
-  pointer-events: none;
+}
+
+.crosshairs:before, 
+.crosshairs:after {
+  content: "";
+  position: absolute;
+  background: var(--dark-background-color);
 }
 
 .crosshairs:before {
-  bottom: 50%;
-  left: 50%;
-  transform: translate(-50%, 0);
-  border-bottom: 2px var(--dark-background-color) solid;
+  width: 27px;
+  height: 2px;
+  top: 50%;
+  left: 0;
 }
 
 .crosshairs:after {
-  right: 50%;
-  top: 50%;
-  transform: translate(0, -50%);
-  border-right: 2px var(--dark-background-color) solid;
+  width: 2px;
+  height: 27px;
+  top: 0;
+  left: 50%;
 }
 
 #map {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+  position: relative;
   width: 100%;
-  z-index: 1;
+  height: 100%;
 }
 
 .locDot {
@@ -213,19 +227,34 @@ p {
 }
 
 @media only screen and (max-width: 800px) {
+  h1 {
+    font-size: 2rem!important;
+  }
+  p {
+    font-size: .9rem!important;
+  }
+  #mapContainer {
+    position: relative;
+    width: 100vw; 
+    height: calc(65vh - 2rem); 
+    overflow: hidden;
+  }
   #sidebar {
       bottom: 0;
       position: fixed;
-      
-      height: 250px;
-      padding: 1rem 3rem;
+      width: 90vw;
+      height: 35vh;
+      padding: 1rem 3rem!important;
       margin: 0px;
       gap: 8px;
       border-bottom: 0px;
   }
-  .leaflet-bottom {
-    bottom: 285px!important;
-  }
+  .leaflet-control-attribution {
+    font-size: 8px;
+    background: rgba(255, 255, 255, 0.0)!important;
+}
+  
+  
 }
 
 .top {
@@ -281,6 +310,7 @@ button:active {
   font-size: .8rem;
   text-decoration: underline;
   cursor: pointer;
+  user-select: none;
 }
 
 #theHelp {
