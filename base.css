@@ -236,7 +236,7 @@ p {
   #mapContainer {
     position: relative;
     width: 100vw; 
-    height:calc(60vh - 2px); 
+    height:calc(60vh - 6px); 
     overflow: hidden;
   }
   #sidebar {
