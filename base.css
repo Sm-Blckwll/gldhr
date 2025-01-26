@@ -236,14 +236,14 @@ p {
   #mapContainer {
     position: relative;
     width: 100vw; 
-    height: calc(65vh - 2rem); 
+    height: calc(60vh - 2rem); 
     overflow: hidden;
   }
   #sidebar {
       bottom: 0;
       position: fixed;
       width: 90vw;
-      height: 35vh;
+      max-height: 40vh;
       padding: 1rem 3rem!important;
       margin: 0px;
       gap: 8px;
