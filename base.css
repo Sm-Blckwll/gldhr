@@ -252,7 +252,8 @@ p {
       padding: 1rem 3rem!important;
       margin: 0px;
       gap: 8px;
-      border-bottom: 0px;
+      border: 0px;
+      box-shadow: none;
   }
   .leaflet-control-attribution {
     font-size: 8px;
