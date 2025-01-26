@@ -65,7 +65,7 @@ body {
 
 .bottom {
   background-color: var(--dark-background-color);
-  position: absolute;
+  position: fixed;
   bottom: 0px;
   padding-top: 1rem;
   width: 100%;
@@ -236,7 +236,7 @@ p {
   #mapContainer {
     position: relative;
     width: 100vw; 
-    height: 60vh; 
+    height:calc(60vh - 2px); 
     overflow: hidden;
   }
   #sidebar {
