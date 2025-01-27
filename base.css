@@ -110,7 +110,7 @@ body {
 #mapContainer {
   position: relative;
   width: 100vw; 
-  height: 100vh; 
+  height: 100dvh; 
   overflow: hidden;
 }
 
@@ -243,7 +243,7 @@ p {
   .main {
     display: contents;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     padding: 0;
     margin: 0;
@@ -268,7 +268,7 @@ p {
     flex-direction: column-reverse;
     align-items: center;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     padding: 0;
     margin: 0;
