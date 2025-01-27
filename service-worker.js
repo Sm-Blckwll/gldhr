@@ -1,4 +1,4 @@
-const CACHE_NAME = 'Golden-Hour-Map-cache-v1';
+const CACHE_NAME = 'Golden-Hour-Map-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
