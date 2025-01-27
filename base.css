@@ -6,6 +6,13 @@
   --accent-color-light: #ec6f7f;
   --accent-color: #a0934d;
   --accent-color-dark: #9e3a47;
+  --dynamic-viewport-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --dynamic-viewport-height: 100dvh;
+  }
 }
 
 body {
@@ -110,7 +117,7 @@ body {
 #mapContainer {
   position: relative;
   width: 100vw; 
-  height: 100dvh; 
+  height: var(--dynamic-viewport-height); 
   overflow: hidden;
 }
 
@@ -243,7 +250,7 @@ p {
   .main {
     display: contents;
     width: 100vw;
-    height: 100dvh;
+    height: var(--dynamic-viewport-height);
     overflow: hidden;
     padding: 0;
     margin: 0;
@@ -268,7 +275,7 @@ p {
     flex-direction: column-reverse;
     align-items: center;
     width: 100vw;
-    height: 100dvh;
+    height: var(--dynamic-viewport-height);
     overflow: hidden;
     padding: 0;
     margin: 0;

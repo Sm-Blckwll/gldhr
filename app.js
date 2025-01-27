@@ -1,7 +1,22 @@
 $(document).ready(function () {
     $("#startButton").click(function () {
         $("#loading").delay(100).fadeOut("fast");
-    });
+    
+        //Google Tag script
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-S5ZJW576QK';
+        script.async = true;
+        document.head.appendChild(script);
+    
+        //Google Tag
+        script.onload = function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+    
+          gtag('config', 'G-S5ZJW576QK');
+        };
+      });
 
     $("#help").click(function () {
         $("#theHelp").delay(100).fadeToggle("fast");
