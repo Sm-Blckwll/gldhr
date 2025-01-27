@@ -16,6 +16,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  
 }
 
 #loading {
@@ -25,10 +26,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   background-color: #ffffffec;
   z-index: 10000;
+  overflow: hidden;
 }
 
 .container {
@@ -69,6 +71,7 @@ body {
   bottom: 0px;
   padding-top: 1rem;
   width: 100%;
+  margin: 0;
   p {
     color: var(--light-text-color);
     font-size: .8rem;
@@ -177,6 +180,10 @@ body {
   border-radius: 4px;
 }
 
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--dark-background-color);
+}
+
 input[type=submit] {
   background: var(--dark-background-color) !important;
   background-image: url(magnifying-glass-solid.svg)!important;
@@ -223,33 +230,64 @@ p {
   transition: transform 0.3s ease;
 }
 
-@media only screen and (min-width: 800px) {
+
+
+@media only screen and (min-width: 1040px) {
   #sidebar {
       position: fixed;
       top: 0;
-      right: 0;
+      right: 15px;
+      
+  }
+  .main {
+    display: contents;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
   }
 }
 
-@media only screen and (max-width: 800px) {
+.sidebarContainer {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+}
+
+@media only screen and (max-width: 1040px) {
   h1 {
     font-size: 2rem!important;
   }
   p {
     font-size: .9rem!important;
   }
-  #mapContainer {
-    position: relative;
-    width: 100vw; 
-    height:calc(60vh - 6px); 
+  .main {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
+    padding: 0;
+    margin: 0;
+    }
+  #mapContainer {
+    flex: 1;
+    position: relative;
+    width: 100%; 
+    height: calc(100vh - 288px);
+    overflow: hidden;
+  }
+  .sidebarContainer {
+    padding: 0rem 2rem;
   }
   #sidebar {
       bottom: 0;
-      position: fixed;
-      width: 90vw;
-      max-height: 40vh;
-      padding: 1rem 3rem!important;
+      position: relative;
+      max-width: 400px;
+      height: fit-content;
+      
       margin: 0px;
       gap: 8px;
       border: 0px;
@@ -276,9 +314,44 @@ p {
   padding: 5px 0px;
 }
 
-.goldenHours {
+#goldenHours {
+  color: white;
   font-weight: bold;
+  display: flex;
+  flex-direction: column;
 }
+
+.rise {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#riseBar {
+  background: white;
+  width: 100%;
+  height: 10px;
+  margin: 4px 8px;
+  border-radius: 4px;
+  max-width: 400px;
+}
+
+.set {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#setBar {
+  background: white;
+  width: 100%;
+  height: 10px;
+  margin: 4px 8px;
+  border-radius: 4px;
+  max-width: 400px;
+}
+
+
 
 .dateButtons {
   display: flex;
@@ -289,6 +362,14 @@ p {
   button {
     width: 100%;
   }
+}
+
+#dateResult {
+  cursor: pointer;
+}
+
+#dateResult:hover {
+  text-decoration: underline;
 }
 
 button {
@@ -321,4 +402,75 @@ button:active {
 
 #theHelp {
   display: none;
+}
+
+
+.ui-dialog {
+  z-index: 10000 !important; /* Ensure the dialog is on top */
+}
+
+.ui-datepicker {
+  width: 250px;
+  padding: 0.2em 0.2em 0.2em 0.2em;
+  display: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  z-index: 10000;
+}
+
+.ui-widget-overlay {
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for the overlay */
+  z-index: 9999; /* Place the overlay just below the dialog */
+}
+
+.ui-widget.ui-widget-content {
+  border: none!important;
+}
+
+.ui-widget-header {
+  border: none!important;
+  background: var(--light-background-color);
+  color: #333333;
+  font-weight: bold;
+}
+
+.ui-widget-content {
+  border: none;
+  background: #ffffff;
+  color: #333333;
+}
+
+.ui-dialog .ui-dialog-content {
+  position: relative;
+  border: 0;
+  padding: 1rem;
+  background: none;
+  overflow: auto;
+}
+
+.ui-button-icon-only .ui-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -8.5px;
+  margin-left: -8.5px;
+}
+
+.ui-button {
+  
+  border: 2px solid rgb(23, 23, 22)!important;
+  color: rgb(23, 23, 22)!important;
+  background-color: rgb(255, 255, 255)!important;
+  border-radius: 0%!important;
+}
+
+
+
+
+.sunrise {
+  background-color: #ffd700; /* Gold */
+}
+
+.sunset {
+  background-color: #ffd700; /* Gold */
 }

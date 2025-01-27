@@ -6,7 +6,37 @@ $(document).ready(function () {
     $("#help").click(function () {
         $("#theHelp").delay(100).fadeToggle("fast");
     });
+
+    $("#dateResult").click(function () {
+        console.log("dateResult clicked");
+        $("<div id='calendar'></div>").dialog({
+            modal: true,
+            title: "Select Date",
+            open: function () {
+                console.log("Calendar opened");
+                $("#calendar").datepicker({
+                    dateFormat: "dd-mm-yy",
+                    onSelect: function (selectedDate) {
+                        console.log("Date selected: " + selectedDate);
+                        const dateArray = selectedDate.split("-");
+                        date.setDate(parseInt(dateArray[0]));
+                        date.setMonth(parseInt(dateArray[1]) - 1);
+                        date.setFullYear(parseInt(dateArray[2]));
+                        calculateGoldenHour();
+                        $("#calendar").dialog("close");
+                    }
+                });
+            },
+            close: function () {
+                console.log("Calendar closed");
+                $("#calendar").remove();
+            }
+        });
+    });
+
+    document.getElementById('dateResult').innerHTML = `Date: ${date.toLocaleDateString('en-GB')}`;
 });
+
 const mapOptions = {
     minZoom: 4,
     maxZoom: 18,
@@ -57,10 +87,6 @@ map.on('click', function (e) {
     popUpLatLng(e);
 });
 
-//map.on('moveend', async function () {
-//  await calculateGoldenHour();
-//});
-
 goButton.addEventListener("click", async function () {
     await calculateGoldenHour();
 });
@@ -72,8 +98,10 @@ async function getTimezoneFromCoords(lat, lng) {
 }
 
 async function calculateGoldenHour() {
-
-    document.getElementById('title').innerHTML = 'Waiting for API<span class="loading-text">.</span>';
+    document.getElementById('title').innerHTML = 'Calculating<span class="loading-text">.</span>';
+    document.getElementById('riseBar').style.background = "white";
+    document.getElementById('setBar').style.background = "white";
+    document.getElementById('goldenHours').style.color = "white";
 
     let c = map.getCenter();
     let lat = parseFloat(c.lat.toFixed(4));
@@ -90,17 +118,19 @@ async function calculateGoldenHour() {
     const goldenHourEndFrom = moment(sunset).tz(timeZone).subtract(1, 'hour').format('HH:mm');
     const goldenHourEndTo = moment(sunset).tz(timeZone).format('HH:mm');
 
+    document.getElementById('goldenHours').style.color = "black";
 
-    document.getElementById('sunriseResult').innerHTML = `
-        Sunrise: ${goldenHourStartFrom} - ${goldenHourStartTo}
-      `;
-    document.getElementById('sunsetResult').innerHTML = `
-        Sunset: ${goldenHourEndFrom} - ${goldenHourEndTo}
-      `;
+    document.getElementById('riseFrom').innerHTML = `${goldenHourStartFrom}`;
+    document.getElementById('riseBar').style.background = "linear-gradient(90deg, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)";
+    document.getElementById('riseTo').innerHTML = `${goldenHourStartTo}`;
+
+    document.getElementById('setFrom').innerHTML = `${goldenHourEndFrom}`;
+    document.getElementById('setBar').style.background = "linear-gradient(270deg, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)";
+    document.getElementById('setTo').innerHTML = `${goldenHourEndTo}`;
 
     document.getElementById('dateResult').innerHTML = `Date: ${date.toLocaleDateString('en-GB')}`;
     document.getElementById('zoneResult').innerHTML = `Time Zone: (${timeZone})`;
-    document.getElementById('title').innerHTML = 'Success!';
+    document.getElementById('title').innerHTML = 'Done!';
 }
 
 L.geolet({ position: 'bottomleft', className: 'locDot', popupContent: function (latlng) { return 'Your location: ' + latlng.lat + ', ' + latlng.lng; } }).addTo(map);
