@@ -7,8 +7,8 @@ $(document).ready(function () {
         $("#theHelp").delay(100).fadeToggle("fast");
     });
 
-    $("#dateResult").click(function () {
-        console.log("dateResult clicked");
+    $("#cal").click(function () {
+        console.log("cal clicked");
         $("<div id='calendar'></div>").dialog({
             modal: true,
             title: "Select Date",
@@ -74,13 +74,13 @@ nextDayButton.addEventListener("click", () => {
 });
 
 function popUpLatLng(e) {
-    var ac = e.latlng.lat.toFixed(4);
+    /*var ac = e.latlng.lat.toFixed(4);
     var bc = e.latlng.lng.toFixed(4);
     new L.Marker([ac, bc], { icon: pin }).addTo(map)
         .bindPopup(ac + ", " + bc)
-        .openPopup();
+        .openPopup();*/
     map.setView(e.latlng);
-    calculateGoldenHour();
+    //calculateGoldenHour();
 }
 
 map.on('click', function (e) {

@@ -228,6 +228,7 @@ p {
   z-index: 1000;
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
+  user-select: none;
 }
 
 
@@ -276,7 +277,7 @@ p {
     flex: 1;
     position: relative;
     width: 100%; 
-    height: calc(100vh - 288px);
+    height: 100%;
     overflow: hidden;
   }
   .sidebarContainer {
@@ -364,13 +365,7 @@ p {
   }
 }
 
-#dateResult {
-  cursor: pointer;
-}
 
-#dateResult:hover {
-  text-decoration: underline;
-}
 
 button {
   padding: 11.2px 24px;
@@ -402,6 +397,14 @@ button:active {
 
 #theHelp {
   display: none;
+}
+
+#cal {
+  width: 50px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 
