@@ -90,12 +90,12 @@ $(document).ready(function () {
     });
 
     async function loadTimeZoneData() {
-        const response = await fetch('timezones.json'); // Use your timezone GeoJSON file
+        const response = await fetch('timezones.json'); //fetching -.-
         return await response.json();
     }
 
     async function findTimeZone(lat, lng, geoJsonData) {
-        const point = turf.point([lng, lat]); // Turf uses [lng, lat]
+        const point = turf.point([lng, lat]);
         for (const feature of geoJsonData.features) {
             const polygon = feature.geometry;
             if (turf.booleanPointInPolygon(point, polygon)) {
