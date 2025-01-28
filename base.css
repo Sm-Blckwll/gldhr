@@ -390,7 +390,7 @@ button:active {
   background-color: rgb(160, 160, 160);
 }
 
-.helpButton {
+.supportButton {
   font-size: .8rem;
   text-decoration: underline;
   cursor: pointer;

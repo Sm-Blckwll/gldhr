@@ -122,11 +122,22 @@ $(document).ready(function () {
         const sunrise = new Date(times.sunrise);
         const sunset = new Date(times.sunset);
 
+        
+
         const goldenHourStartFrom = moment(sunrise).tz(timeZone).format('HH:mm');
         const goldenHourStartTo = moment(sunrise).tz(timeZone).add(1, 'hour').format('HH:mm');
         const goldenHourEndFrom = moment(sunset).tz(timeZone).subtract(1, 'hour').format('HH:mm');
         const goldenHourEndTo = moment(sunset).tz(timeZone).format('HH:mm');
 
+        if (isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) {
+            
+            $('#riseFrom').html('😢');
+            $('#riseBar').css("background", "grey");
+            $('#riseTo').html('😢');
+            $('#setFrom').html('😢');
+            $('#setBar').css("background", "grey");
+            $('#setTo').html('😢');
+        } else {
         $('#goldenHours').css("color", "black");
 
         $('#riseFrom').html(goldenHourStartFrom);
@@ -139,6 +150,7 @@ $(document).ready(function () {
 
         $('#dateResult').html(`Date: ${date.toLocaleDateString('en-GB')}`);
         $('#zoneResult').html(`Time Zone: (${timeZone})`);
+        }
 
     }
 

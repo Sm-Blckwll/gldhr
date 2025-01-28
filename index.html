@@ -38,13 +38,27 @@
   <div id="loading">
     <div class="load-container">
       <h1>Golden Hour Map</h1>
-      <p>A simple map-based golden hour calculator. <br>Just line up the crosshairs with your desired location, and
-        click go!</p>
+      <p>A simple map-based golden hour calculator. <br>Just line up the crosshairs with your desired location.</p>
       <button id="startButton">Get started</button>
-      <div class="helpButton" id="help">Help me?!</div>
+      <div class="supportButton" id="help">Donate</div>
       <div id="theHelp">
-        <p><b>Q:</b> API won't load! 😴<br><b>A:</b> It's free - give it some time. 😇</p>
-        <p><b>Q:</b> It's broken on my phone 😡<br><b>A:</b> There are too many screensizes I'm only human 😣</p>
+        <p><b>No ads! - They're annoying.</b> <br>Please consider donating if you found it useful! 😇</p>
+        <div id="donate-button-container">
+          <div id="donate-button"></div>
+          <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
+          <script>
+          PayPal.Donation.Button({
+          env:'production',
+          hosted_button_id:'MJCKZBKJ9GJD6',
+          image: {
+          src:'https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif',
+          alt:'Donate with PayPal button',
+          title:'PayPal - The safer, easier way to pay online!',
+          }
+          }).render('#donate-button');
+          </script>
+          </div>
+          
       </div>
 
       <div class="bottom">
