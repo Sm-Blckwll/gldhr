@@ -7,11 +7,13 @@
   --accent-color: #a0934d;
   --accent-color-dark: #9e3a47;
   --dynamic-viewport-height: 100vh;
+  --dynamic-viewport-width: 100vw;
 }
 
 @supports (height: 100dvh) {
   :root {
     --dynamic-viewport-height: 100dvh;
+    --dynamic-viewport-width: 100dvw;
   }
 }
 
@@ -116,7 +118,7 @@ body {
 
 #mapContainer {
   position: relative;
-  width: 100vw; 
+  width: var(--dynamic-viewport-width); 
   height: var(--dynamic-viewport-height); 
   overflow: hidden;
 }
@@ -249,7 +251,7 @@ p {
   }
   .main {
     display: contents;
-    width: 100vw;
+    width: var(--dynamic-viewport-width);
     height: var(--dynamic-viewport-height);
     overflow: hidden;
     padding: 0;
@@ -274,7 +276,7 @@ p {
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
-    width: 100vw;
+    width: var(--dynamic-viewport-width);
     height: var(--dynamic-viewport-height);
     overflow: hidden;
     padding: 0;
@@ -316,6 +318,11 @@ p {
   align-items: flex-start;
   width: 100%;
   justify-content: space-between;
+
+  p {
+    font-style: italic;
+    font-size: .8rem;
+  }
 }
 
 .dateAndZone {

@@ -1,10 +1,12 @@
-// This is the "Offline page" service worker
+
+
+
+const CACHE = "pwabuilder-GHM-v2";
+
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
-const CACHE = "pwabuilder-GHM-v1";
-
-
+// TODO: replace the following with the correct offline fallback page i.e.: const offlineFallbackPage = "offline.html";
 const offlineFallbackPage = "index.html";
 
 self.addEventListener("message", (event) => {
@@ -23,6 +25,13 @@ self.addEventListener('install', async (event) => {
 if (workbox.navigationPreload.isSupported()) {
   workbox.navigationPreload.enable();
 }
+
+workbox.routing.registerRoute(
+  new RegExp('/*'),
+  new workbox.strategies.StaleWhileRevalidate({
+    cacheName: CACHE
+  })
+);
 
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
