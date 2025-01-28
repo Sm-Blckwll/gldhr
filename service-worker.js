@@ -1,7 +1,7 @@
 
 
 
-const CACHE = "pwabuilder-GHM-v3";
+const CACHE = "pwabuilder-GHM-v1.7";
 
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');

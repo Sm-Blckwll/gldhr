@@ -51,7 +51,8 @@ $(document).ready(function () {
                         date.setDate(parseInt(dateArray[0]));
                         date.setMonth(parseInt(dateArray[1]) - 1);
                         date.setFullYear(parseInt(dateArray[2]));
-                        calculateGoldenHour();
+                        const center = map.getCenter();
+                        calculateGoldenHour(center);
                         $("#calendar").dialog("close");
                     }
                 });
@@ -74,10 +75,26 @@ $(document).ready(function () {
     }
 
     // Update date result
-    $('#dateResult').html(`Date: ${date.toLocaleDateString('en-GB')}`);
+    const userLocale = navigator.language || 'en-US';
+    const localDate = new Intl.DateTimeFormat(userLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    document.getElementById('dateResult').innerHTML = `Date: ${localDate}`;
 
-    // Add Go button event listener
-    $("#go").click(function () {
+
+
+
+    $('#prev-day').click(function () {
+        date.setDate(date.getDate() - 1);
+        const center = map.getCenter();
+        calculateGoldenHour(center);
+    });
+
+    $('#next-day').click(function () {
+        date.setDate(date.getDate() + 1);
+        const center = map.getCenter();
+        calculateGoldenHour(center);
+    });
+
+    map.on('moveend', async function () {
         const center = map.getCenter();
         calculateGoldenHour(center);
     });
@@ -90,7 +107,7 @@ $(document).ready(function () {
 
     // Calculate Golden Hour
     async function calculateGoldenHour(latlng) {
-        
+
         $('#riseBar').css("background", "white");
         $('#setBar').css("background", "white");
         $('#goldenHours').css("color", "white");
@@ -122,7 +139,7 @@ $(document).ready(function () {
 
         $('#dateResult').html(`Date: ${date.toLocaleDateString('en-GB')}`);
         $('#zoneResult').html(`Time Zone: (${timeZone})`);
-        
+
     }
 
     // Add Geocoder
@@ -141,4 +158,6 @@ $(document).ready(function () {
         }
     });
     map.addControl(osmGeocoder);
+    L.geolet({ position: 'bottomleft', className: 'locDot', popupContent: function (latlng) { return 'Your location: ' + latlng.lat + ', ' + latlng.lng; } }).addTo(map);
+
 });
