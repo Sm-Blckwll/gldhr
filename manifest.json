@@ -40,7 +40,7 @@
       "density": "4.0"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/android-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "density": "5.0"
