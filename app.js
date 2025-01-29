@@ -1,6 +1,6 @@
 $(document).ready(function () {
     const date = new Date();
-    const version = '<p>v1.8✨</p>';
+    const version = '<p>v1.9✨</p>';
     
 
     
