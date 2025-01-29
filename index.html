@@ -4,25 +4,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Golden Hour Map</title>
+  <title>Golden Hour Map - Find the Perfect Time for Photos</title>
+  <meta name="description"
+    content="Discover the perfect time for golden hour with Golden Hour Map. Get accurate timings for the best natural light for photography.">
+  <meta name="keywords"
+    content="golden hour map, golden hour photography, best time for photos, golden hour calculator, sunset photography">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
-<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
-<link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/manifest.json">
-<meta name="msapplication-TileColor" content="#ffffff">
-<meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-<meta name="theme-color" content="#ffffff">
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+  <meta name="theme-color" content="#ffffff">
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
   <link rel="stylesheet" href="Control.OSMGeocoder.css" />
@@ -36,9 +40,9 @@
 
 <body>
   <div id="loading">
-    <div class="load-container">
+    <div class="load-container" >
       <h1>Golden Hour Map</h1>
-      <p>A simple map-based golden hour calculator. <br>Just line up the crosshairs with your desired location.</p>
+      <p>A simple map-based golden hour calculator to find the golden times for your next photoshoot.<br>Just line up the crosshairs with your desired location.</p>
       <button id="startButton">Get started</button>
       <div class="supportButton" id="help">Donate</div>
       <div id="theHelp">
@@ -47,18 +51,18 @@
           <div id="donate-button"></div>
           <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
           <script>
-          PayPal.Donation.Button({
-          env:'production',
-          hosted_button_id:'MJCKZBKJ9GJD6',
-          image: {
-          src:'https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif',
-          alt:'Donate with PayPal button',
-          title:'PayPal - The safer, easier way to pay online!',
-          }
-          }).render('#donate-button');
+            PayPal.Donation.Button({
+              env: 'production',
+              hosted_button_id: 'MJCKZBKJ9GJD6',
+              image: {
+                src: 'https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif',
+                alt: 'Donate with PayPal button',
+                title: 'PayPal - The safer, easier way to pay online!',
+              }
+            }).render('#donate-button');
           </script>
-          </div>
-          
+        </div>
+
       </div>
 
       <div class="bottom">
@@ -70,48 +74,69 @@
 
   <div class="main">
 
-  
 
-  <div id="sidebar">
-    <div class="sidebarContainer">
-    <div class="top">
-      <h2 id="title">Golden Hour Map</h2>
-      <p>v1.7✨</p>
-    </div>
-    <div id="goldenHours">
-      <div class="rise">
-        <p id="riseFrom">00:00</p>
-        <div id="riseBar"></div>
-        <p id="riseTo">00:00</p>
+
+    <div id="sidebar">
+      <div class="sidebarContainer">
+        <div class="top">
+          <h2 id="title">Golden Hour Map<p>v1.8✨</p>
+          </h2>
+          <div id="shareButton" title="Share">
+            <svg fill="#000000" version="1.1" xmlns="http://www.w3.org/2000/svg"
+              xmlns:xlink="http://www.w3.org/1999/xlink" width="20px" height="20px" viewBox="0 0 512 512"
+              xml:space="preserve">
+              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+              <g id="SVGRepo_iconCarrier">
+                <g id="7935ec95c421cee6d86eb22ecd12b5bb">
+                  <path style="display: inline;"
+                    d="M505.705,421.851c0,49.528-40.146,89.649-89.637,89.649c-49.527,0-89.662-40.121-89.662-89.649 c0-1.622,0.148-3.206,0.236-4.815l-177.464-90.474c-14.883,11.028-33.272,17.641-53.221,17.641 c-49.528,0-89.662-40.134-89.662-89.649s40.134-89.649,89.662-89.649c22.169,0,42.429,8.097,58.086,21.433l172.774-88.09 c-0.25-2.682-0.412-5.364-0.412-8.097c0-49.503,40.135-89.649,89.662-89.649c49.49,0,89.637,40.146,89.637,89.649 c0,49.516-40.146,89.65-89.637,89.65c-22.082,0-42.242-8.009-57.861-21.221l-172.999,88.215c0.224,2.558,0.387,5.14,0.387,7.76 c0,4.653-0.474,9.182-1.148,13.648l171.389,87.379c15.92-14.472,37.004-23.379,60.232-23.379 C465.559,332.201,505.705,372.348,505.705,421.851z">
+                  </path>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+        </div>
+        <div id="goldenHours">
+          <div class="rise">
+            <p id="riseFrom">00:00</p>
+            <div id="riseBar"></div>
+            <p id="riseTo">00:00</p>
+          </div>
+          <div class="set">
+            <p id="setFrom">00:00</p>
+            <div id="setBar"></div>
+            <p id="setTo">00:00</p>
+          </div>
+        </div>
+        <div class="dateAndZone">
+          <p id="dateResult">Date:</p>
+          <p id="zoneResult">Time Zone:</p>
+        </div>
+
+
+
+        <div class="dateButtons">
+          <button id="prev-day" title="Previous day">-1</button>
+          <button id="cal">🗓️</button>
+          <button id="next-day" title="Next day">+1</button>
+        </div>
+
+
+
+
       </div>
-      <div class="set">
-        <p id="setFrom">00:00</p>
-        <div id="setBar"></div>
-        <p id="setTo">00:00</p>
-      </div>
-    </div>
-    <div class="dateAndZone">
-      <p id="dateResult">Date:</p>
-      <p id="zoneResult">Time Zone:</p>
+
     </div>
 
-    
 
-    <div class="dateButtons">
-      <button id="prev-day" title="Previous day">-1</button>
-      <button id="cal">🗓️</button>
-      <button id="next-day" title="Next day">+1</button>
+    <div id="mapContainer">
+
+      <div id="map"></div>
+      <div class="crosshairs"></div>
     </div>
-
-    
   </div>
-  </div>
-
-  <div id="mapContainer">
-    <div id="map"></div>
-    <div class="crosshairs"></div>
-  </div>
-</div>
 
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js"></script>
@@ -125,7 +150,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tz-lookup"></script>
 
-  
+
 
 
 

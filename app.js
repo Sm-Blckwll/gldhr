@@ -1,7 +1,9 @@
 $(document).ready(function () {
     const date = new Date();
+    const version = '<p>v1.8✨</p>';
+    
 
-    // Initialize map
+    
     const mapOptions = {
         minZoom: 4,
         maxZoom: 18,
@@ -16,12 +18,112 @@ $(document).ready(function () {
         maxZoom: 18
     }).addTo(map);
 
-    // Handle Start Button click
-    $("#startButton").click(function () {
-        $("#loading").delay(100).fadeOut("fast");
+    
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lng = parseFloat(params.get('lng'));
+    const dateParam = params.get('date');
 
-        var script = document.createElement('script');
-        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-S5ZJW576QK';
+    if (!isNaN(lat) && !isNaN(lng)) {
+        map.setView([lat, lng]);
+    }
+    if (dateParam) {
+        const [day, month, year] = dateParam.split('-').map(Number);
+        date.setDate(day);
+        date.setMonth(month - 1);
+        date.setFullYear(year);
+    }
+
+    calculateGoldenHour(map.getCenter());
+
+    
+    $('#shareButton').click(() => {
+        const center = map.getCenter();
+        const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${center.lat}&lng=${center.lng}&date=${date.toLocaleDateString('en-GB').replace(/\//g, '-')}`;
+        copyToClipboard(shareUrl);
+
+        function updateTitle(content) {
+            $('#title').fadeOut(200, function () {
+                $(this).html(content).fadeIn(200);
+            });
+        }
+        const ogTitle = $('#title').html();
+        updateTitle(`Saved to clipboard${version}`);
+        setTimeout(function () {
+            updateTitle(ogTitle);
+        }, 2000);
+
+    });
+
+    
+    function copyToClipboard(text) {
+        const tempInput = document.createElement('input');
+        document.body.appendChild(tempInput);
+        tempInput.value = text;
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+    }
+
+    
+    $("#startButton").click(() => {
+        $("#loading").delay(100).fadeOut("fast");
+        loadGoogleAnalytics('G-S5ZJW576QK');
+    });
+
+    $("#help").click(() => {
+        $("#theHelp").delay(100).fadeToggle("fast");
+    });
+
+    $("#cal").click(() => {
+        $("<div id='calendar'></div>").dialog({
+            modal: true,
+            title: "Select Date",
+            open() {
+                $("#calendar").datepicker({
+                    dateFormat: "dd-mm-yy",
+                    onSelect: function (selectedDate) {
+                        const [day, month, year] = selectedDate.split("-").map(Number);
+                        date.setDate(day);
+                        date.setMonth(month - 1);
+                        date.setFullYear(year);
+                        calculateGoldenHour(map.getCenter());
+                        $("#calendar").dialog("close");
+                    }
+                });
+            },
+            close() {
+                $("#calendar").remove();
+            }
+        });
+    });
+
+    
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => console.log('Service Worker registered with scope:', registration.scope))
+            .catch(error => console.log('Service Worker registration failed:', error));
+    }
+
+    
+    const userLocale = navigator.language || 'en-US';
+    const localDate = new Intl.DateTimeFormat(userLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    $('#dateResult').text(`Date: ${localDate}`);
+
+    
+    $('#prev-day, #next-day').click(function () {
+        const dayOffset = $(this).attr('id') === 'prev-day' ? -1 : 1;
+        date.setDate(date.getDate() + dayOffset);
+        calculateGoldenHour(map.getCenter());
+    });
+
+    
+    map.on('moveend', () => calculateGoldenHour(map.getCenter()));
+
+    
+    async function loadGoogleAnalytics(id) {
+        const script = document.createElement('script');
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
         script.async = true;
         document.head.appendChild(script);
 
@@ -29,147 +131,111 @@ $(document).ready(function () {
             window.dataLayer = window.dataLayer || [];
             function gtag() { dataLayer.push(arguments); }
             gtag('js', new Date());
-            gtag('config', 'G-S5ZJW576QK');
+            gtag('config', id);
         };
-    });
-
-    // Handle Help Button click
-    $("#help").click(function () {
-        $("#theHelp").delay(100).fadeToggle("fast");
-    });
-
-    // Handle Calendar Button click
-    $("#cal").click(function () {
-        $("<div id='calendar'></div>").dialog({
-            modal: true,
-            title: "Select Date",
-            open: function () {
-                $("#calendar").datepicker({
-                    dateFormat: "dd-mm-yy",
-                    onSelect: function (selectedDate) {
-                        const dateArray = selectedDate.split("-");
-                        date.setDate(parseInt(dateArray[0]));
-                        date.setMonth(parseInt(dateArray[1]) - 1);
-                        date.setFullYear(parseInt(dateArray[2]));
-                        const center = map.getCenter();
-                        calculateGoldenHour(center);
-                        $("#calendar").dialog("close");
-                    }
-                });
-            },
-            close: function () {
-                $("#calendar").remove();
-            }
-        });
-    });
-
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(function (registration) {
-                console.log('Service Worker registered with scope:', registration.scope);
-            })
-            .catch(function (error) {
-                console.log('Service Worker registration failed:', error);
-            });
     }
 
-    // Update date result
-    const userLocale = navigator.language || 'en-US';
-    const localDate = new Intl.DateTimeFormat(userLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-    document.getElementById('dateResult').innerHTML = `Date: ${localDate}`;
-
-
-
-
-    $('#prev-day').click(function () {
-        date.setDate(date.getDate() - 1);
-        const center = map.getCenter();
-        calculateGoldenHour(center);
-    });
-
-    $('#next-day').click(function () {
-        date.setDate(date.getDate() + 1);
-        const center = map.getCenter();
-        calculateGoldenHour(center);
-    });
-
-    map.on('moveend', async function () {
-        const center = map.getCenter();
-        calculateGoldenHour(center);
-    });
-
-    // Load Timezone data using tz-lookup
     async function loadTimeZoneData(lat, lng) {
         const timeZone = tzlookup(lat, lng);
-        return timeZone || 'UTC'; // Fallback to 'UTC' if no time zone found
+        return timeZone || 'UTC';
     }
 
-    // Calculate Golden Hour
     async function calculateGoldenHour(latlng) {
+        const { lat, lng } = latlng;
 
-        $('#riseBar').css("background", "white");
-        $('#setBar').css("background", "white");
-        $('#goldenHours').css("color", "white");
+        resetGoldenHourDisplay();
 
-        let lat = latlng.lat;
-        let lng = latlng.lng;
-
-        // Get Time Zone using tz-lookup
         const timeZone = await loadTimeZoneData(lat, lng);
-
         const times = SunCalc.getTimes(date, lat, lng);
-        const sunrise = new Date(times.sunrise);
-        const sunset = new Date(times.sunset);
 
-        
+        const sunrise = times.sunrise ? new Date(times.sunrise) : NaN;
+        const sunset = times.sunset ? new Date(times.sunset) : NaN;
 
-        const goldenHourStartFrom = moment(sunrise).tz(timeZone).format('HH:mm');
-        const goldenHourStartTo = moment(sunrise).tz(timeZone).add(1, 'hour').format('HH:mm');
-        const goldenHourEndFrom = moment(sunset).tz(timeZone).subtract(1, 'hour').format('HH:mm');
-        const goldenHourEndTo = moment(sunset).tz(timeZone).format('HH:mm');
+        // Handle Polar Day or Night
+        if (isNaN(sunrise) && isNaN(sunset)) {
+            const noonAltitude = SunCalc.getPosition(date, lat, lng).altitude;
 
-        if (isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) {
-            
-            $('#riseFrom').html('😢');
-            $('#riseBar').css("background", "grey");
-            $('#riseTo').html('😢');
-            $('#setFrom').html('😢');
-            $('#setBar').css("background", "grey");
-            $('#setTo').html('😢');
-        } else {
-        $('#goldenHours').css("color", "black");
-
-        $('#riseFrom').html(goldenHourStartFrom);
-        $('#riseBar').css("background", "linear-gradient(90deg, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)");
-        $('#riseTo').html(goldenHourStartTo);
-
-        $('#setFrom').html(goldenHourEndFrom);
-        $('#setBar').css("background", "linear-gradient(270deg, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)");
-        $('#setTo').html(goldenHourEndTo);
-
-        $('#dateResult').html(`Date: ${date.toLocaleDateString('en-GB')}`);
-        $('#zoneResult').html(`Time Zone: (${timeZone})`);
+            if (noonAltitude > 0) {
+                $('#title').html(`Polar Day 😁${version}`);
+                updateGoldenHourDisplay('🌞', 'rgba(255,223,140,1)');
+            } else {
+                $('#title').html(`Polar Night 😭${version}`);
+                updateGoldenHourDisplay('🌚', 'rgb(140, 142, 255)');
+            }
+            return;
         }
 
+        if (isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) {
+            updateGoldenHourDisplay('No sunrise or sunset at this location.', 'grey');
+        } else {
+            $('#title').html(`Golden Hour Map${version}`);
+            const goldenHourStartFrom = formatTime(sunrise, timeZone);
+            const goldenHourStartTo = formatTime(new Date(sunrise.getTime() + 3600000), timeZone);
+            const goldenHourEndFrom = formatTime(new Date(sunset.getTime() - 3600000), timeZone);
+            const goldenHourEndTo = formatTime(sunset, timeZone);
+
+            updateGoldenHourDisplay({
+                startFrom: goldenHourStartFrom,
+                startTo: goldenHourStartTo,
+                endFrom: goldenHourEndFrom,
+                endTo: goldenHourEndTo
+            });
+
+            $('#dateResult').text(`Date: ${date.toLocaleDateString('en-GB')}`);
+            $('#zoneResult').text(`Time Zone: (${timeZone})`);
+        }
     }
 
-    // Add Geocoder
-    var osmGeocoder = new L.Control.OSMGeocoder({
+    function resetGoldenHourDisplay() {
+        $('#riseBar, #setBar').css("background", "white");
+        $('#goldenHours').css("color", "white");
+    }
+
+    function formatTime(date, timeZone) {
+        return moment(date).tz(timeZone).format('HH:mm');
+    }
+
+    function updateGoldenHourDisplay(timings, color = "black") {
+        $('#goldenHours').css("color", color);
+    
+        if (typeof timings === 'string') {
+            ['#riseFrom', '#riseTo', '#setFrom', '#setTo'].forEach(id => $(id).html(timings));
+            $('#riseBar, #setBar').css("background", color);
+        } else {
+            $('#riseFrom, #riseTo, #setFrom, #setTo').each((index, element) => {
+                const id = element.id;
+                const key = id.charAt(0) === 'r' ? `start${id.slice(4)}` : `end${id.slice(3)}`;
+                $(element).html(timings[key]);
+            });
+    
+            ['#riseBar', '#setBar'].forEach(id => {
+                const direction = id === '#riseBar' ? '90deg' : '270deg';
+                $(id).css("background", `linear-gradient(${direction}, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)`).fadeOut(100).delay(0).fadeIn(100);
+            });
+        }
+    }
+    
+
+    
+    const osmGeocoder = new L.Control.OSMGeocoder({
         collapsed: true,
         position: 'topleft',
         text: '-',
         placeholder: '',
         bounds: null,
-        callback: function (results) {
-            var bbox = results[0].boundingbox,
-                first = new L.LatLng(bbox[0], bbox[2]),
-                second = new L.LatLng(bbox[1], bbox[3]),
-                bounds = new L.LatLngBounds([first, second]);
+        callback(results) {
+            const [firstLat, secondLat, firstLng, secondLng] = results[0].boundingbox.map(Number);
+            const bounds = new L.LatLngBounds([firstLat, firstLng], [secondLat, secondLng]);
             map.fitBounds(bounds);
         }
     });
     map.addControl(osmGeocoder);
-    L.geolet({ position: 'bottomleft', className: 'locDot', popupContent: function (latlng) { return 'Your location: ' + latlng.lat + ', ' + latlng.lng; } }).addTo(map);
 
+    L.geolet({
+        position: 'bottomleft',
+        className: 'locDot',
+        popupContent(latlng) {
+            return `Your location: ${latlng.lat}, ${latlng.lng}`;
+        }
+    }).addTo(map);
 });

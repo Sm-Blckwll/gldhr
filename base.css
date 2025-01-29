@@ -253,13 +253,13 @@ p {
   flex-direction: column;
 }
 
+
+
 @media only screen and (max-width: 1040px) {
   h1 {
     font-size: 2rem!important;
   }
-  p {
-    font-size: .9rem!important;
-  }
+  
   .main {
     display: flex;
     flex-direction: column-reverse;
@@ -313,6 +313,29 @@ p {
   }
 }
 
+#shareButton {
+  cursor: pointer;
+  transition: all .2s ease;
+  padding-top: 5px;
+}
+
+#shareButton:hover {
+  transform: scale(1.2);
+  
+  svg {
+    fill: rgba(255,223,140,1);
+  }
+
+}
+
+#shareButton:active {
+  svg {
+    fill: rgb(65, 65, 65);
+  }
+
+}
+
+
 .dateAndZone {
   padding: 5px 0px;
 }
@@ -338,6 +361,8 @@ p {
   border-radius: 4px;
   max-width: 400px;
 }
+
+
 
 .set {
   display: flex;
@@ -397,6 +422,10 @@ button:active {
   user-select: none;
 }
 
+#load {
+  display: none;
+}
+
 #theHelp {
   display: none;
 }
@@ -411,7 +440,7 @@ button:active {
 
 
 .ui-dialog {
-  z-index: 10000 !important; /* Ensure the dialog is on top */
+  z-index: 10000 !important; 
 }
 
 .ui-datepicker {
@@ -424,8 +453,8 @@ button:active {
 }
 
 .ui-widget-overlay {
-  background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for the overlay */
-  z-index: 9999; /* Place the overlay just below the dialog */
+  background: rgba(0, 0, 0, 0.5); 
+  z-index: 9999; 
 }
 
 .ui-widget.ui-widget-content {
@@ -473,9 +502,9 @@ button:active {
 
 
 .sunrise {
-  background-color: #ffd700; /* Gold */
+  background-color: #ffd700;
 }
 
 .sunset {
-  background-color: #ffd700; /* Gold */
+  background-color: #ffd700; 
 }
