@@ -1,9 +1,11 @@
 $(document).ready(function () {
     const date = new Date();
-    const version = '<p>v1.9✨</p>';
-    
+    const version = '<p>v2✨</p>';
 
-    
+
+
+
+
     const mapOptions = {
         minZoom: 4,
         maxZoom: 18,
@@ -18,11 +20,14 @@ $(document).ready(function () {
         maxZoom: 18
     }).addTo(map);
 
-    
+
     const params = new URLSearchParams(window.location.search);
     const lat = parseFloat(params.get('lat'));
     const lng = parseFloat(params.get('lng'));
     const dateParam = params.get('date');
+
+
+
 
     if (!isNaN(lat) && !isNaN(lng)) {
         map.setView([lat, lng]);
@@ -34,9 +39,16 @@ $(document).ready(function () {
         date.setFullYear(year);
     }
 
-    calculateGoldenHour(map.getCenter());
+    const initialCenter = map.getCenter();
+    const initialTimes = SunCalc.getTimes(date, initialCenter.lat, initialCenter.lng);
+    const initialSunrise = initialTimes.sunrise ? new Date(initialTimes.sunrise) : NaN;
+    const initialSunset = initialTimes.sunset ? new Date(initialTimes.sunset) : NaN;
 
-    
+    drawSunLines(initialCenter, initialSunrise, initialSunset);
+    calculateGoldenHour(initialCenter);
+
+
+
     $('#shareButton').click(() => {
         const center = map.getCenter();
         const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${center.lat}&lng=${center.lng}&date=${date.toLocaleDateString('en-GB').replace(/\//g, '-')}`;
@@ -55,7 +67,7 @@ $(document).ready(function () {
 
     });
 
-    
+
     function copyToClipboard(text) {
         const tempInput = document.createElement('input');
         document.body.appendChild(tempInput);
@@ -65,7 +77,7 @@ $(document).ready(function () {
         document.body.removeChild(tempInput);
     }
 
-    
+
     $("#startButton").click(() => {
         $("#loading").delay(100).fadeOut("fast");
         loadGoogleAnalytics('G-S5ZJW576QK');
@@ -88,6 +100,7 @@ $(document).ready(function () {
                         date.setMonth(month - 1);
                         date.setFullYear(year);
                         calculateGoldenHour(map.getCenter());
+                        drawSunLines(map.getCenter(), date);
                         $("#calendar").dialog("close");
                     }
                 });
@@ -98,29 +111,30 @@ $(document).ready(function () {
         });
     });
 
-    
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/service-worker.js')
             .then(registration => console.log('Service Worker registered with scope:', registration.scope))
             .catch(error => console.log('Service Worker registration failed:', error));
     }
 
-    
+
     const userLocale = navigator.language || 'en-US';
     const localDate = new Intl.DateTimeFormat(userLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
     $('#dateResult').text(`Date: ${localDate}`);
 
-    
+
     $('#prev-day, #next-day').click(function () {
         const dayOffset = $(this).attr('id') === 'prev-day' ? -1 : 1;
         date.setDate(date.getDate() + dayOffset);
         calculateGoldenHour(map.getCenter());
+        drawSunLines(map.getCenter(), date);
     });
 
-    
+
     map.on('moveend', () => calculateGoldenHour(map.getCenter()));
 
-    
+
     async function loadGoogleAnalytics(id) {
         const script = document.createElement('script');
         script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
@@ -136,8 +150,17 @@ $(document).ready(function () {
     }
 
     async function loadTimeZoneData(lat, lng) {
-        const timeZone = tzlookup(lat, lng);
-        return timeZone || 'UTC';
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            console.error("Invalid coordinates: Latitude must be between -90 and 90, and Longitude must be between -180 and 180. Please refresh.");
+            return;
+        }
+        try {
+            const timeZone = tzlookup(lat, lng);
+            return timeZone || 'UTC';
+        } catch (error) {
+            console.error("Error fetching timezone data: ", error);
+            return 'UTC';
+        }
     }
 
     async function calculateGoldenHour(latlng) {
@@ -151,7 +174,6 @@ $(document).ready(function () {
         const sunrise = times.sunrise ? new Date(times.sunrise) : NaN;
         const sunset = times.sunset ? new Date(times.sunset) : NaN;
 
-        // Handle Polar Day or Night
         if (isNaN(sunrise) && isNaN(sunset)) {
             const noonAltitude = SunCalc.getPosition(date, lat, lng).altitude;
 
@@ -186,6 +208,59 @@ $(document).ready(function () {
         }
     }
 
+    function drawSunLines(center, selectedDate) {
+        if (window.sunriseLine || window.sunsetLine) {
+            [window.sunriseLine, window.sunsetLine].forEach(line => line && map.removeLayer(line));
+            window.sunriseLine = window.sunsetLine = null;
+        }
+
+        const { lat, lng } = center;
+        const R = 6378.1;
+
+        function calculateEndPoint(lat, lng, azimuth, distance = 10000) {
+            const bearing = azimuth * (Math.PI / 180);
+            const lat1 = lat * (Math.PI / 180);
+            const lng1 = lng * (Math.PI / 180);
+
+            const lat2 = Math.asin(
+                Math.sin(lat1) * Math.cos(distance / R) +
+                Math.cos(lat1) * Math.sin(distance / R) * Math.cos(bearing)
+            );
+
+            const lng2 = lng1 + Math.atan2(
+                Math.sin(bearing) * Math.sin(distance / R) * Math.cos(lat1),
+                Math.cos(distance / R) - Math.sin(lat1) * Math.sin(lat2)
+            );
+
+            return [lat2 * (180 / Math.PI), lng2 * (180 / Math.PI)];
+        }
+
+        function addLine(time, color, dashArray, lineName) {
+            if (!isNaN(time.getTime())) {
+                const position = SunCalc.getPosition(time, lat, lng);
+                const azimuth = position.azimuth * (180 / Math.PI) + 180;
+                const endPoint = calculateEndPoint(lat, lng, azimuth, 10000);
+
+                window[lineName] = L.polyline([center, endPoint], {
+                    color: color,
+                    weight: 2,
+                    dashArray: dashArray
+                }).addTo(map);
+            }
+        }
+
+        const times = SunCalc.getTimes(selectedDate, lat, lng); // Use the selected date here
+        const sunrise = times.sunrise ? new Date(times.sunrise) : NaN;
+        const sunset = times.sunset ? new Date(times.sunset) : NaN;
+
+        addLine(sunset, 'rgb(255, 140, 140)', '15, 5', 'sunsetLine');
+        addLine(sunrise, 'rgb(255, 146, 210)', '15, 5', 'sunriseLine');
+    }
+
+
+    map.on('move', () => drawSunLines(map.getCenter(), date));
+
+
     function resetGoldenHourDisplay() {
         $('#riseBar, #setBar').css("background", "white");
         $('#goldenHours').css("color", "white");
@@ -197,7 +272,7 @@ $(document).ready(function () {
 
     function updateGoldenHourDisplay(timings, color = "black") {
         $('#goldenHours').css("color", color);
-    
+
         if (typeof timings === 'string') {
             ['#riseFrom', '#riseTo', '#setFrom', '#setTo'].forEach(id => $(id).html(timings));
             $('#riseBar, #setBar').css("background", color);
@@ -207,16 +282,20 @@ $(document).ready(function () {
                 const key = id.charAt(0) === 'r' ? `start${id.slice(4)}` : `end${id.slice(3)}`;
                 $(element).html(timings[key]);
             });
-    
-            ['#riseBar', '#setBar'].forEach(id => {
-                const direction = id === '#riseBar' ? '90deg' : '270deg';
-                $(id).css("background", `linear-gradient(${direction}, rgba(255,146,146,1) 0%, rgba(255,223,140,1) 100%)`).fadeOut(100).delay(0).fadeIn(100);
-            });
+
+            $('#riseBar')
+                .css("background", "linear-gradient(90deg, rgb(255, 146, 210) 0%, rgb(255, 238, 140) 100%)")
+                .fadeOut(100)
+                .fadeIn(100);
+
+            $('#setBar')
+                .css("background", "linear-gradient(270deg, rgb(255, 140, 140) 0%, rgb(255, 238, 140) 100%)")
+                .fadeOut(100)
+                .fadeIn(100);
         }
     }
-    
 
-    
+
     const osmGeocoder = new L.Control.OSMGeocoder({
         collapsed: true,
         position: 'topleft',

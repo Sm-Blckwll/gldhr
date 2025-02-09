@@ -46,15 +46,26 @@
       "density": "5.0"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#fbbc05",
+  "background_color": "#fbbc05",
   "display": "standalone",
   "short_name": "GH Map",
   "id": "GHMA",
-  "description": "A simple map-based golden hour calculator.\nJust line up the crosshairs with your desired location, and click go!",
+  "description": "A simple map-based golden hour calculator.\nJust line up the crosshairs with your desired location!",
   "categories": [
     "photo",
     "utilities",
     "weather"
-  ]
+  ],
+  "dir": "auto",
+  "lang": "en",
+  "orientation": "any",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "fullscreen",
+    "window-controls-overlay",
+    "browser"
+  ],
+  "prefer_related_applications": false
 }

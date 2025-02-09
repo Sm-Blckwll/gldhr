@@ -323,6 +323,21 @@ p {
   
 }
 
+/* Ensure that the sun label is visible and positioned correctly */
+.sun-label {
+  font-size: 16px;  /* Ensure text size is readable */
+  font-weight: bold;
+  color: rgba(255, 223, 140, 1);  /* Default label color */
+  text-align: center;
+  pointer-events: none;  /* Prevent interaction with the label */
+  transform-origin: center center; /* Ensure rotation is based on the center */
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+
+
+
+
 .top {
   display: flex;
   flex-direction: row;
