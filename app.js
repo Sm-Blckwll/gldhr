@@ -1,6 +1,6 @@
 $(document).ready(function () {
     const date = new Date();
-    const version = '<p>v2.1✨</p>';
+    const version = '<p>v2.2✨</p>';
 
 
 
@@ -250,8 +250,8 @@ $(document).ready(function () {
                 window[lineName] = L.polyline([center, endPoint], {
                     color: color,
                     weight: 2,
-                    dashArray: dashArray,
-                    noClip: true,
+                    dashArray: dashArray
+                    
                 }).addTo(map);
                 $('path.leaflet-interactive').fadeOut(0);
 
