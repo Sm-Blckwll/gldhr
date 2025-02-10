@@ -1,6 +1,6 @@
 $(document).ready(function () {
     const date = new Date();
-    const version = '<p>v2✨</p>';
+    const version = '<p>v2.1✨</p>';
 
 
 
@@ -15,8 +15,8 @@ $(document).ready(function () {
 
     const map = L.map('map', mapOptions);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+    L.tileLayer('http://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
         maxZoom: 18
     }).addTo(map);
 
@@ -46,6 +46,7 @@ $(document).ready(function () {
 
     drawSunLines(initialCenter, initialSunrise, initialSunset);
     calculateGoldenHour(initialCenter);
+    $('path.leaflet-interactive').delay(200).fadeOut(0).fadeIn(100);
 
 
 
@@ -101,6 +102,7 @@ $(document).ready(function () {
                         date.setFullYear(year);
                         calculateGoldenHour(map.getCenter());
                         drawSunLines(map.getCenter(), date);
+                        $('path.leaflet-interactive').delay(100).fadeOut(0).fadeIn(100);
                         $("#calendar").dialog("close");
                     }
                 });
@@ -129,6 +131,7 @@ $(document).ready(function () {
         date.setDate(date.getDate() + dayOffset);
         calculateGoldenHour(map.getCenter());
         drawSunLines(map.getCenter(), date);
+        $('path.leaflet-interactive').delay(100).fadeOut(0).fadeIn(100);
     });
 
 
@@ -217,7 +220,10 @@ $(document).ready(function () {
         const { lat, lng } = center;
         const R = 6378.1;
 
-        function calculateEndPoint(lat, lng, azimuth, distance = 10000) {
+
+        const distance = 10000;
+
+        function calculateEndPoint(lat, lng, azimuth, distance) {
             const bearing = azimuth * (Math.PI / 180);
             const lat1 = lat * (Math.PI / 180);
             const lng1 = lng * (Math.PI / 180);
@@ -239,17 +245,21 @@ $(document).ready(function () {
             if (!isNaN(time.getTime())) {
                 const position = SunCalc.getPosition(time, lat, lng);
                 const azimuth = position.azimuth * (180 / Math.PI) + 180;
-                const endPoint = calculateEndPoint(lat, lng, azimuth, 10000);
+                const endPoint = calculateEndPoint(lat, lng, azimuth, distance);
 
                 window[lineName] = L.polyline([center, endPoint], {
                     color: color,
                     weight: 2,
-                    dashArray: dashArray
+                    dashArray: dashArray,
+                    noClip: true,
                 }).addTo(map);
+                $('path.leaflet-interactive').fadeOut(0);
+
+
             }
         }
 
-        const times = SunCalc.getTimes(selectedDate, lat, lng); // Use the selected date here
+        const times = SunCalc.getTimes(selectedDate, lat, lng);
         const sunrise = times.sunrise ? new Date(times.sunrise) : NaN;
         const sunset = times.sunset ? new Date(times.sunset) : NaN;
 
@@ -257,8 +267,14 @@ $(document).ready(function () {
         addLine(sunrise, 'rgb(255, 146, 210)', '15, 5', 'sunriseLine');
     }
 
-
-    map.on('move', () => drawSunLines(map.getCenter(), date));
+    map.on('movestart', () => $('path.leaflet-interactive').fadeOut(50));
+    map.on('moveend', () => {
+        
+        drawSunLines(map.getCenter(), date);
+        $('path.leaflet-interactive').delay(100).fadeIn(100);
+        
+    });
+    map.on('zoom', () => drawSunLines(map.getCenter(), date));
 
 
     function resetGoldenHourDisplay() {

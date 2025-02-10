@@ -510,7 +510,7 @@ button:active {
 }
 
 .ui-widget-content {
-  border: none;
+  border: solid 1px #333;
   background: #ffffff;
   color: #333333;
 }
@@ -538,6 +538,44 @@ button:active {
   background-color: rgb(255, 255, 255)!important;
   border-radius: 0%!important;
 }
+
+.ui-datepicker {
+  background: #fff;
+  border: none;
+  margin: auto!important;
+}
+.ui-datepicker-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 31px!important;
+  background: #333;
+  color: #fff;
+  padding: 0px!important;
+}
+.ui-datepicker-title {
+  font-weight: bold;
+}
+.ui-state-default {
+  background: #333!important;
+  border: none!important;
+  color: #fff!important;
+  border-radius: 2px!important;
+
+  
+}
+
+
+.ui-state-hover {
+  background: #fff!important;
+  border: none!important;
+  color: #333!important;
+}
+.ui-state-highlight {
+  background-color: #ffd700!important;
+}
+
+
 
 
 
