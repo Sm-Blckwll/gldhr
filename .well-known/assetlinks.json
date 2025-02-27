@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.goldenhourmap.twa",
+        "sha256_cert_fingerprints": ["26:7F:1A:66:CE:C7:29:97:08:6A:F4:EA:1D:63:33:39:D5:E4:E9:0E:DE:71:5B:9F:EC:3E:67:DB:37:FE:74:9F"]
+      }
+    }]
