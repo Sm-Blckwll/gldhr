@@ -88,15 +88,16 @@ L.Control.OSMGeocoder = L.Control.extend({
 	},
 	_isLatLon : function (q) {
 		//"lon lat" => xx.xxx x.xxxxx
-		var re = /(-?\d+\.\d+)\s(-?\d+\.\d+)/;
+		var re = /(-?\d+\.\d+)\s*[,;]?\s*(-?\d+\.\d+)/;
 		var m = re.exec(q);
-		if (m != undefined) return m;
+		// accept "51.5, -0.12" as well as "51.5 -0.12", but only real coordinates
+		if (m != undefined && Math.abs(m[1]) <= 90 && Math.abs(m[2]) <= 180) return m;
 
 		//lat...xx.xxx...lon...x.xxxxx
 		re = /lat\D*(-?\d+\.\d+)\D*lon\D*(-?\d+\.\d+)/;
 		m = re.exec(q);
 		//showRegExpResult(m);
-		if (m != undefined) return m;
+		if (m != undefined && Math.abs(m[1]) <= 90 && Math.abs(m[2]) <= 180) return m;
 		else return null;
 	},
 	_isLatLon_decMin : function (q) {
@@ -141,16 +142,16 @@ L.Control.OSMGeocoder = L.Control.extend({
 
 		//and now Nominatim
 		//http://wiki.openstreetmap.org/wiki/Nominatim
-		console.log(this._callbackId);
-		window[("_l_osmgeocoder_"+this._callbackId)] = L.Util.bind(this.options.callback, this);
+		var callbackName = "_l_osmgeocoder_" + this._callbackId++;
 
 
 		/* Set up params to send to Nominatim */
 		var params = {
 			// Defaults
 			q: this._input.value,
-			json_callback : ("_l_osmgeocoder_"+this._callbackId++),
-			format: 'json'
+			json_callback : callbackName,
+			format: 'json',
+			limit: 6
 		};
 
 		if (this.options.bounds && this.options.bounds != null) {
@@ -181,9 +182,23 @@ L.Control.OSMGeocoder = L.Control.extend({
 
 
 
+		var self = this;
+		var cleanup = function () {
+			if (script.parentNode) script.parentNode.removeChild(script);
+			try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+		};
+		window[callbackName] = function (results) {
+			cleanup();
+			self.options.callback.call(self, results);
+		};
+		script.onerror = function () {
+			cleanup();
+			if (typeof self.options.onError == 'function') self.options.onError.call(self);
+		};
+
 		script.type = "text/javascript";
 		script.src = url;
-		script.id = this._callbackId;
+		script.id = callbackName;
 		document.getElementsByTagName("head")[0].appendChild(script);
 	},
 

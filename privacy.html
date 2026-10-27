@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Privacy &amp; cookies - Golden Hour Map</title>
+  <meta name="description" content="How Golden Hour Map handles your data: no accounts, no ads, and Google Analytics cookies only if you accept.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://goldenhourmap.com/privacy.html">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12151d" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+    :root {
+      --bg: #eef1f5; --card: rgb(255 255 255 / 0.72); --edge: rgb(13 18 32 / 0.1);
+      --text: #0d1220; --text-2: #242b3f; --text-3: #3b445a; --amber: #f5a00b; --amber-text: #8a4e00; --on-amber: #2a1700; --focus: #0b63ce;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #12151d; --card: rgb(32 37 50 / 0.72); --edge: rgb(255 255 255 / 0.12); --text: #f6f8fc; --text-2: #e6eaf3; --text-3: #c9d0df; --amber-text: #ffc45c; --focus: #8cc2ff; }
+    }
+    * { box-sizing: border-box; }
+    @font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/outfit-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/outfit-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text); background: var(--bg);
+      background-image: radial-gradient(ellipse 80% 40% at 10% 0%, rgb(150 205 255 / 0.28), transparent 70%), radial-gradient(ellipse 70% 40% at 100% 100%, rgb(255 196 95 / 0.25), transparent 70%);
+      background-attachment: fixed;
+      font: 16px/1.6 "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 24px 32px; background: var(--card); border: 1px solid var(--edge); border-radius: 28px; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+    @media (prefers-reduced-transparency: reduce) { main { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+    .back { display: inline-block; margin-bottom: 18px; font-weight: 700; font-size: 15px; color: var(--amber-text); text-decoration: none; border-radius: 6px; }
+    .back:hover { text-decoration: underline; }
+    h1 { margin: 0; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -0.025em; }
+    h2 { margin: 28px 0 6px; font-size: 18px; line-height: 1.3; font-weight: 700; letter-spacing: -0.015em; }
+    p, li { color: var(--text-2); }
+    p { margin: 8px 0; }
+    ul { margin: 8px 0; padding-left: 22px; }
+    li { margin: 4px 0; }
+    .updated { margin-top: 6px; font-size: 14px; color: var(--text-3); }
+    .lead { font-size: 17px; color: var(--text); }
+    a { color: var(--amber-text); text-underline-offset: 2px; }
+    a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+    code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 1px 5px; border-radius: 6px; background: var(--edge); }
+    table { width: 100%; margin: 10px 0; border-collapse: collapse; font-size: 14.5px; }
+    th, td { padding: 8px 10px 8px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--edge); color: var(--text-2); }
+    th { color: var(--text); font-weight: 750; }
+    .wrap { overflow-x: auto; }
+    @media (max-width: 480px) { main { padding: 22px 18px 26px; border-radius: 24px; } h1 { font-size: 28px; } }
+  </style>
+</head>
+
+<body>
+  <main>
+    <a class="back" href="/">&larr; Back to Golden Hour Map</a>
+    <h1>Privacy &amp; cookies</h1>
+    <p class="updated">Last updated 27 October 2026</p>
+
+    <p class="lead">Golden Hour Map is free, with no accounts and no ads. It uses Google Analytics cookies only if you accept them, and you can change your mind at any time.</p>
+
+    <h2>Who runs this site</h2>
+    <p>Golden Hour Map (goldenhourmap.com) is run by one person in the United Kingdom, who decides how analytics data is used (the "data controller" under UK GDPR). Contact: <a href="mailto:privacy@goldenhourmap.com">privacy@goldenhourmap.com</a></p>
+
+    <h2>What happens if you do nothing</h2>
+    <p>Until you choose, no analytics script is loaded and no analytics cookies are set. The site has no accounts, no sign-up and no advertising. We do not run a server that receives your data: the site is a static page hosted on GitHub Pages and everything else happens in your browser.</p>
+
+    <h2>Analytics cookies (only if you accept)</h2>
+    <p>If you choose "Accept &amp; get started" (or "Accept" in the menu under Privacy &amp; cookies), we load Google Analytics 4 (measurement ID <code>G-S5ZJW576QK</code>) to see how the site is used so we can improve it.</p>
+    <div class="wrap">
+      <table>
+        <thead><tr><th>Cookie</th><th>What it does</th><th>Lasts</th></tr></thead>
+        <tbody>
+          <tr><td><code>_ga</code></td><td>Tells one browser from another so visits can be counted.</td><td>Up to 2 years</td></tr>
+          <tr><td><code>_ga_S5ZJW576QK</code></td><td>Keeps the state of your current visit.</td><td>Up to 2 years</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Google Analytics records things like the pages you view, roughly where you are (country or city, worked out from a shortened IP address), your browser, device and screen size, and how you arrived. Your IP address is anonymised. We have switched off Google signals and ad personalisation, so this data is not used for advertising. Google acts on our behalf to process it, and it may be processed outside the UK, including in the United States.</p>
+    <p>Google Analytics keeps this data for 2 months (the retention period set in our Google Analytics account); after that it is automatically deleted.</p>
+    <p>Our legal basis is your consent (UK GDPR Article 6(1)(a), and the Privacy and Electronic Communications Regulations). Declining has no effect on how the app works.</p>
+
+    <h2>Changing or withdrawing your choice</h2>
+    <ul>
+      <li>Open the menu in the app and choose <strong>Privacy &amp; cookies</strong>, then press Accept or Decline. Declining removes the analytics cookies and stops further analytics in that visit.</li>
+      <li>We ask again after 12 months.</li>
+      <li>If your browser sends a Do Not Track or Global Privacy Control signal, we treat it as "decline" and analytics stays off.</li>
+      <li>If your browser blocks site storage, we cannot remember an "Accept", so analytics stays off.</li>
+      <li>You can also clear cookies and site data in your browser settings at any time.</li>
+    </ul>
+
+    <h2>What is stored on your device</h2>
+    <p>These items are stored in your browser's local storage only. They are never sent to us and are not used to identify you.</p>
+    <ul>
+      <li><code>ghm-consent-v2</code>: your analytics choice and its date.</li>
+      <li><code>ghm-dock</code>: whether the details panel is open or closed.</li>
+      <li><code>ghm-hint-seen</code>: that you have seen the "move the map" hint.</li>
+      <li><code>ghm-support</code>: when we last showed the optional support message, so we do not repeat it.</li>
+    </ul>
+    <p>The app also keeps a copy of its own files in your browser (a service worker cache) so it can work offline.</p>
+
+    <h2>Other services the app contacts</h2>
+    <p>Like any website, these providers can see your IP address and browser details when your browser fetches content from them. We do not control their logs.</p>
+    <ul>
+      <li><strong>GitHub Pages</strong> serves the site.</li>
+      <li><strong>Esri</strong> provides the map tiles for the area you are viewing.</li>
+      <li><strong>OpenStreetMap Nominatim</strong> receives the place you type into search.</li>
+      <li><strong>unpkg</strong> and <strong>Google Cloud Storage</strong> deliver code libraries the app needs (Leaflet and the offline service worker library).</li>
+      <li><strong>PayPal</strong> handles donations if you choose to give. That happens on PayPal's own site.</li>
+    </ul>
+    <p>"Show my location" uses your browser's location permission. Your position is used on your device to centre the map and work out the sun times, and is not sent to us. The map tiles for that area are requested from Esri.</p>
+    <p>Google's own explanation of how it uses data from sites that use its services: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">policies.google.com/technologies/partner-sites</a>.</p>
+
+    <h2>Your rights</h2>
+    <p>You can ask to see, correct or delete personal data we hold about you, object to its use, or withdraw consent. Analytics data is not linked to a name or email, so it can usually only be tied to you through your browser's cookie. If you are unhappy with how we handle data, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer">ico.org.uk</a>.</p>
+
+    <h2>Changes</h2>
+    <p>If this page changes in a way that matters, we will update the date at the top and, if needed, ask for your choice again.</p>
+  </main>
+</body>
+
+</html>

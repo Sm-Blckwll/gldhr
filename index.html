@@ -1,14 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Golden Hour Map - Find the Perfect Time for Photos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Golden Hour Map – Golden hour, sunrise &amp; sunset times and direction for any location</title>
   <meta name="description"
-    content="Discover the perfect time for golden hour with Golden Hour Map. Get accurate timings for the best natural light for photography.">
+    content="Free golden hour calculator and map. Sunrise and sunset times with the sun direction for any location on Earth, for photographers and filmmakers. No sign-up, no ads.">
   <meta name="keywords"
-    content="golden hour map, golden hour photography, best time for photos, golden hour calculator, sunset photography">
+    content="golden hour map, golden hour calculator, golden hour photography, sunrise and sunset times, sun direction, best time for photos, sunset photography">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://goldenhourmap.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Golden Hour Map">
+  <meta property="og:url" content="https://goldenhourmap.com/">
+  <meta property="og:title" content="Golden Hour Map – Golden hour, sunrise &amp; sunset times and direction for any location">
+  <meta property="og:description"
+    content="Free golden hour calculator and map. Sunrise and sunset times with the sun direction for any location on Earth. No sign-up, no ads.">
+  <meta property="og:image" content="https://goldenhourmap.com/android-icon-512x512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Golden Hour Map app icon">
+  <meta property="og:locale" content="en_GB">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Golden Hour Map – Golden hour, sunrise &amp; sunset times and direction for any location">
+  <meta name="twitter:description"
+    content="Free golden hour calculator and map. Sunrise and sunset times with the sun direction for any location on Earth. No sign-up, no ads.">
+  <meta name="twitter:image" content="https://goldenhourmap.com/android-icon-512x512.png">
+  <meta name="twitter:image:alt" content="Golden Hour Map app icon">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Golden Hour Map",
+    "url": "https://goldenhourmap.com/",
+    "description": "Free golden hour calculator and map. Sunrise and sunset times with the sun direction for any location on Earth, for photographers and filmmakers. No sign-up, no ads.",
+    "applicationCategory": "PhotographyApplication",
+    "operatingSystem": "Any (web browser)",
+    "browserRequirements": "Requires JavaScript",
+    "inLanguage": "en",
+    "isAccessibleForFree": true,
+    "image": "https://goldenhourmap.com/android-icon-512x512.png",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" }
+  }
+  </script>
+  <meta name="color-scheme" content="light dark">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
   <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
@@ -23,150 +59,242 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/manifest.json">
   <meta name="msapplication-TileColor" content="#ffffff">
   <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
-  <meta name="theme-color" content="#ffffff">
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12151d" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
   <link rel="stylesheet" href="Control.OSMGeocoder.css" />
-  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-
-
-  <style>
-    @import url('./base.css');
-  </style>
+  <link rel="stylesheet" href="base.css" />
 </head>
 
 <body>
-  <div id="loading">
-    <div class="load-container" >
-      <h1>Golden Hour Map</h1>
-      <p>A simple map-based golden hour calculator to find the golden times for your next photoshoot.<br>Just line up the crosshairs with your desired location.</p>
-      <button id="startButton">Get started</button>
-      <div class="supportButton" id="help">Donate</div>
-      <div id="theHelp">
-        <p><b>No ads! - They're annoying.</b> <br>Please consider donating if you found it useful! 😇</p>
-        <div id="donate-button-container">
-          <div id="donate-button"></div>
-          <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
-          <script>
-            PayPal.Donation.Button({
-              env: 'production',
-              hosted_button_id: 'MJCKZBKJ9GJD6',
-              image: {
-                src: 'https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif',
-                alt: 'Donate with PayPal button',
-                title: 'PayPal - The safer, easier way to pay online!',
-              }
-            }).render('#donate-button');
-          </script>
-        </div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="gSun" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffd46b" />
+        <stop offset="1" stop-color="#f5a00b" />
+      </linearGradient>
+    </defs>
+    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M3 18.5h18M7 18.5a5 5 0 0 1 10 0M12 6.5v3.2M5.2 10.7l1.9 1.9M18.8 10.7l-1.9 1.9M9.4 5.6 12 3l2.6 2.6" /></symbol>
+    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M3 18.5h18M7 18.5a5 5 0 0 1 10 0M12 6.5v3.2M5.2 10.7l1.9 1.9M18.8 10.7l-1.9 1.9M9.4 3.6 12 6.2l2.6-2.6" /></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5" /></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9.5 5.5 6.5 6.5-6.5 6.5" /></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" /><circle cx="12" cy="12" r="7.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3.5M8 7.2l4-4 4 4M6 10.5H5.5A2 2 0 0 0 3.5 12.5v6a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H18" /></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.7v5.3c0 4.4-2.9 7.7-7 9.6-4.1-1.9-7-5.2-7-9.6V5.9l7-2.7z" /><path d="M9 12l2.2 2.2L15.2 10" /></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8" /><path d="M12 11v5.2" /><circle cx="12" cy="7.8" r=".6" fill="currentColor" /></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="18.5" cy="12" r="1.5" fill="currentColor" stroke="none" /></symbol>
+    <symbol id="i-chev-u" viewBox="0 0 24 24"><path d="m5.5 14.5 6.5-6.5 6.5 6.5" /></symbol>
+    <symbol id="i-pan" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-2.6 2.6M12 3l2.6 2.6M12 21l-2.6-2.6M12 21l2.6-2.6M3 12l2.6-2.6M3 12l2.6 2.6M21 12l-2.6-2.6M21 12l-2.6 2.6" /></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2Z" /></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.8v2.5M12 18.8v2.5M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" /></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.8-5.7-6.8-11.2a6.8 6.8 0 0 1 13.6 0C18.8 15.3 12 21 12 21Z" /><circle cx="12" cy="9.8" r="2.4" /></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.6" /><path d="m20 20-4.4-4.4" /></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 4.8 6.2 4.8c2.1 0 3.6 1.1 4.6 2.7h2.4c1-1.6 2.5-2.7 4.6-2.7 3.5 0 5.3 3.6 3.8 7C19.5 16.4 12 21 12 21z" /></symbol>
+  </svg>
 
+  <h1 class="sr-only">Golden Hour Map: golden hour times for any place</h1>
+  <div id="app">
+    <div id="map"></div>
+    <svg id="sunArrows" class="sun-arrows" aria-hidden="true" focusable="false"></svg>
+
+    <div class="crosshair" aria-hidden="true"><i class="tick t1"></i><i class="tick t2"></i><i class="tick t3"></i><i class="tick t4"></i><i class="dot"></i></div>
+    <div id="hint" class="hint glass" role="status" hidden>
+      <svg class="ic" aria-hidden="true"><use href="#i-pan" /></svg>
+      <span>Move the map to pick a spot</span>
+    </div>
+
+    <div class="status-wrap">
+      <div id="status" class="status glass" data-state="loading" role="group" aria-label="Golden hour status">
+        <i id="statusDot" class="status-dot" aria-hidden="true"></i>
+        <p id="statusMain" class="status-main"><span class="sm">Finding golden hour&hellip;</span></p>
+      </div>
+    </div>
+
+    <div id="tools" class="tools">
+      <button id="toolsBtn" class="ctl glass" type="button" aria-label="Map tools" title="Map tools" aria-haspopup="menu" aria-expanded="false" aria-controls="toolsMenu">
+        <svg class="ic" aria-hidden="true"><use href="#i-more" /></svg>
+      </button>
+      <button id="locateBtn" class="ctl glass" type="button" aria-label="Show my location" title="Show my location" aria-pressed="false">
+        <svg class="ic" aria-hidden="true"><use href="#i-locate" /></svg>
+      </button>
+      <div id="toolsMenu" class="menu glass" role="menu" aria-label="Map tools" hidden>
+        <button id="menuLocate" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-locate" /></svg><span id="menuLocateText">Show my location</span></button>
+        <div class="menu-sep menu-zoom" role="separator"></div>
+        <button id="zoomIn" class="menu-item menu-zoom" type="button" role="menuitem" tabindex="-1" data-keep="1"><svg class="ic" aria-hidden="true"><use href="#i-plus" /></svg><span>Zoom in</span></button>
+        <button id="zoomOut" class="menu-item menu-zoom" type="button" role="menuitem" tabindex="-1" data-keep="1"><svg class="ic" aria-hidden="true"><use href="#i-minus" /></svg><span>Zoom out</span></button>
+        <div class="menu-sep" role="separator"></div>
+        <button id="shareBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-share" /></svg><span>Copy share link</span></button>
+        <button id="supportBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-heart" /></svg><span>Support</span></button>
+        <button id="privacyBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-shield" /></svg><span>Privacy &amp; cookies</span></button>
+        <button id="infoBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-info" /></svg><span>About</span></button>
+      </div>
+      <div id="supportPanel" class="support-panel glass" role="dialog" aria-labelledby="spnTitle" hidden>
+        <div class="sp-head">
+          <svg class="sp-heart" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-heart" /></svg>
+          <h2 id="spnTitle">Support Golden Hour Map</h2>
+          <button id="supportClose" class="sp-close" type="button" aria-label="Close" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+        </div>
+        <p class="sp-text">Golden Hour Map is free, with no ads, built and run by one person. A small donation keeps it online and improving.</p>
+        <div class="amounts" data-amounts></div>
+        <a class="sp-other" data-donate-other href="https://www.paypal.com/donate/?hosted_button_id=MJCKZBKJ9GJD6" target="_blank" rel="noopener noreferrer" aria-label="Other amount with PayPal (opens in a new tab)">Other amount</a>
+        <p class="sp-note">Donations go through PayPal and open in a new tab. Thank you.</p>
+      </div>
+      <div id="privacyPanel" class="support-panel privacy-panel glass" role="dialog" aria-labelledby="prvTitle" hidden>
+        <div class="sp-head">
+          <svg class="sp-heart" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield" /></svg>
+          <h2 id="prvTitle">Privacy &amp; cookies</h2>
+          <button id="privacyClose" class="sp-close" type="button" aria-label="Close" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+        </div>
+        <p class="sp-text" id="prvStatus" aria-live="polite"></p>
+        <div class="amounts" role="group" aria-label="Analytics cookies">
+          <button id="prvAllow" class="btn btn-primary btn-sm" type="button" aria-pressed="false">Accept</button>
+          <button id="prvDeny" class="btn btn-secondary btn-sm" type="button" aria-pressed="false">Decline</button>
+        </div>
+        <a class="sp-other" href="/privacy.html" target="_blank" rel="noopener">Read the privacy page</a>
+      </div>
+    </div>
+
+    <aside id="supportPrompt" class="support-prompt glass" aria-labelledby="spTitle" hidden>
+      <div class="sp-head">
+        <svg class="sp-heart" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-heart" /></svg>
+        <h2 id="spTitle">Enjoying Golden Hour Map?</h2>
+      </div>
+      <p class="sp-text">It's free, no ads, built by one person. A small donation keeps it online.</p>
+      <div class="sp-row">
+        <div class="amounts" data-amounts></div>
+        <button id="spLater" class="sp-later" type="button">Not now</button>
+      </div>
+    </aside>
+
+    <section id="dock" class="dock glass" aria-label="Golden hour times" data-state="loading" data-expanded="false">
+      <div id="detail" class="detail">
+        <div class="detail-inner">
+          <div class="arc-box">
+            <svg id="arc" class="arc" viewBox="-40 -14 392 186" role="img" aria-label="Sun path for the day"></svg>
+          </div>
+          <div class="arc-ends">
+            <div class="arc-end arc-end-l">
+              <span class="lbl">Sunrise</span>
+              <b id="sunriseTime">--:--</b>
+              <span class="dir" id="sunriseDir"></span>
+            </div>
+            <div class="arc-end arc-end-r">
+              <span class="lbl">Sunset</span>
+              <b id="sunsetTime">--:--</b>
+              <span class="dir" id="sunsetDir"></span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="bottom">
-        <p>This site uses Google Analytics to improve the website's performance. By clicking 'Get started' you consent
-          to Google's terms and conditions.</p>
+      <div id="windows" class="minis">
+        <article id="miniAm" class="mini mini-am" aria-label="Morning golden hour">
+          <span class="mini-ic"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sunrise" /></svg></span>
+          <div class="mini-txt">
+            <span class="mini-label">Morning<span id="nowAm" hidden> &middot; now</span></span>
+            <span class="mini-time"><span id="amFrom">--:--</span><span class="dash">&ndash;</span><span id="amTo">--:--</span></span>
+          </div>
+        </article>
+        <article id="miniPm" class="mini mini-pm" aria-label="Evening golden hour">
+          <span class="mini-ic"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sunset" /></svg></span>
+          <div class="mini-txt">
+            <span class="mini-label">Evening<span id="nowPm" hidden> &middot; now</span></span>
+            <span class="mini-time"><span id="pmFrom">--:--</span><span class="dash">&ndash;</span><span id="pmTo">--:--</span></span>
+          </div>
+        </article>
+      </div>
+
+      <div id="notice" class="notice" hidden>
+        <svg class="ic" aria-hidden="true"><use id="noticeIcon" href="#i-sun" /></svg>
+        <div>
+          <h3 id="noticeTitle"></h3>
+          <p id="noticeText"></p>
+        </div>
+      </div>
+
+      <div class="dock-row">
+        <div class="datebar" role="group" aria-label="Choose day">
+          <button id="prev-day" class="step" type="button" aria-label="Previous day" title="Previous day">
+            <svg class="ic" aria-hidden="true"><use href="#i-chev-l" /></svg>
+          </button>
+          <div class="datepill">
+            <button id="cal" class="datepill-btn" type="button" aria-label="Choose date" title="Choose date" aria-haspopup="dialog" aria-expanded="false" aria-controls="calendar">
+              <svg class="ic ic-sm" aria-hidden="true"><use href="#i-cal" /></svg>
+              <span id="dateLabel">&nbsp;</span>
+              <span id="todayBadge" class="badge" hidden>Today</span>
+            </button>
+          </div>
+          <button id="next-day" class="step" type="button" aria-label="Next day" title="Next day">
+            <svg class="ic" aria-hidden="true"><use href="#i-chev-r" /></svg>
+          </button>
+        </div>
+        <button id="expandBtn" class="expand" type="button" aria-expanded="false" aria-controls="detail" aria-label="Show the sun path" title="Show the sun path">
+          <svg class="ic" aria-hidden="true"><use href="#i-chev-u" /></svg>
+        </button>
+      </div>
+    </section>
+
+    <div id="attribution" class="attrib">
+      <button id="attribToggle" class="attrib-link" type="button" aria-expanded="false" aria-controls="attribPop" aria-haspopup="dialog">Attribution</button>
+      <span class="attrib-dot" aria-hidden="true">&middot;</span>
+      <p class="attrib-meta" id="placeMeta"><span class="am-in"><span class="am-seg" id="appVersion">v4.0</span><span class="am-seg" id="pmTz"></span></span></p>
+      <div id="attribPop" class="attrib-pop glass" role="dialog" aria-label="Map credits" hidden>
+        <div class="attrib-head"><h2>Map credits</h2><button id="attribClose" class="attrib-close" type="button" aria-label="Close credits" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+        <p id="attribText" class="attrib-text">Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, and the GIS User Community. Search: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">Nominatim</a> &copy; OpenStreetMap contributors. Map by <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, location by <a href="https://github.com/rhlt/leaflet-geolet" target="_blank" rel="noopener">Geolet</a>. <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a>.</p>
+      </div>
+    </div>
+
+    <div id="calScrim" class="cal-scrim" hidden></div>
+    <div id="calendar" class="calendar glass" role="dialog" aria-label="Choose a date" hidden>
+      <div class="cal-head">
+        <button id="calPrev" class="cal-nav" type="button" aria-label="Previous month"><svg class="ic" aria-hidden="true"><use href="#i-chev-l" /></svg></button>
+        <button id="calTitle" class="cal-title" type="button" aria-expanded="false" title="Choose month and year"><span id="calTitleText" aria-live="polite"></span><svg class="ic ic-xs cal-caret" aria-hidden="true"><use href="#i-chev-r" /></svg></button>
+        <button id="calNext" class="cal-nav" type="button" aria-label="Next month"><svg class="ic" aria-hidden="true"><use href="#i-chev-r" /></svg></button>
+      </div>
+      <div class="cal-body">
+        <div id="calGrid" class="cal-grid" role="grid" aria-labelledby="calTitleText"></div>
+        <div id="calMonths" class="cal-months" role="group" aria-label="Choose month" hidden></div>
+      </div>
+      <div class="cal-foot">
+        <button id="calToday" class="cal-btn cal-btn-today" type="button">Today</button>
+        <button id="calClose" class="cal-btn" type="button">Close</button>
       </div>
     </div>
   </div>
 
-  <div class="main">
+  <div id="toast" class="toast glass" role="status" aria-live="polite"></div>
+  <div id="liveRegion" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-
-
-    <div id="sidebar">
-      <div class="sidebarContainer">
-        <div class="top">
-          <h2 id="title">Golden Hour Map<p>v2.2✨</p>
-          </h2>
-          <div id="shareButton" title="Share">
-            <svg fill="#000000" version="1.1" xmlns="http://www.w3.org/2000/svg"
-              xmlns:xlink="http://www.w3.org/1999/xlink" width="20px" height="20px" viewBox="0 0 512 512"
-              xml:space="preserve">
-              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-              <g id="SVGRepo_iconCarrier">
-                <g id="7935ec95c421cee6d86eb22ecd12b5bb">
-                  <path style="display: inline;"
-                    d="M505.705,421.851c0,49.528-40.146,89.649-89.637,89.649c-49.527,0-89.662-40.121-89.662-89.649 c0-1.622,0.148-3.206,0.236-4.815l-177.464-90.474c-14.883,11.028-33.272,17.641-53.221,17.641 c-49.528,0-89.662-40.134-89.662-89.649s40.134-89.649,89.662-89.649c22.169,0,42.429,8.097,58.086,21.433l172.774-88.09 c-0.25-2.682-0.412-5.364-0.412-8.097c0-49.503,40.135-89.649,89.662-89.649c49.49,0,89.637,40.146,89.637,89.649 c0,49.516-40.146,89.65-89.637,89.65c-22.082,0-42.242-8.009-57.861-21.221l-172.999,88.215c0.224,2.558,0.387,5.14,0.387,7.76 c0,4.653-0.474,9.182-1.148,13.648l171.389,87.379c15.92-14.472,37.004-23.379,60.232-23.379 C465.559,332.201,505.705,372.348,505.705,421.851z">
-                  </path>
-                </g>
-              </g>
-            </svg>
-          </div>
-
-        </div>
-        <div id="goldenHours">
-          <div class="rise">
-            <p id="riseFrom">00:00</p>
-            <div id="riseBar"></div>
-            <p id="riseTo">00:00</p>
-          </div>
-          <div class="set">
-            <p id="setFrom">00:00</p>
-            <div id="setBar"></div>
-            <p id="setTo">00:00</p>
-          </div>
-        </div>
-        <div class="dateAndZone">
-          <p id="dateResult">Date:</p>
-          <p id="zoneResult">Time Zone:</p>
-        </div>
-
-
-
-        <div class="dateButtons">
-          <button id="prev-day" title="Previous day">-1</button>
-          <button id="cal">🗓️</button>
-          <button id="next-day" title="Next day">+1</button>
-        </div>
-
-
-
-
+  <div id="welcome" class="welcome open" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome-sheet glass">
+      <p class="welcome-kicker">Golden hour calculator</p>
+      <h2 id="welcomeTitle">Golden Hour Map</h2>
+      <p class="welcome-desc">Sunrise and sunset times with the sun direction for anywhere on Earth. Get the golden hour for free, with no sign-up and no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
+      <div class="welcome-actions">
+        <button id="startButton" class="btn btn-primary" type="button">Accept &amp; get started</button>
+        <button id="declineButton" class="btn btn-secondary" type="button">Continue without analytics</button>
       </div>
-
-    </div>
-
-
-    <div id="mapContainer">
-
-      <div id="map"></div>
-      <div class="crosshairs"></div>
+      <p class="consent" id="consentAsk">We use Google Analytics cookies to understand how the site is used and improve it. Nothing is collected unless you accept. <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a> &middot; <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">How Google uses data</a></p>
+      <p class="consent" id="consentKnown" hidden><span id="consentKnownText"></span> <a href="/privacy.html" target="_blank" rel="noopener">Privacy page</a></p>
+      <p class="welcome-ver" id="welcomeVer"></p>
+      <div class="welcome-art"><img src="/icon-512x512.png" width="512" height="512" alt="Golden Hour Map artwork: a cat resting its chin on a golden globe" decoding="async"></div>
     </div>
   </div>
 
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js"></script>
   <script src="Control.OSMGeocoder.js"></script>
   <script src="suncalc.js"></script>
   <script src="geolet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment-timezone@0.5.34/builds/moment-timezone-with-data.min.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-  <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tz-lookup"></script>
-  
-
-  
-  
-  
-
-
-
-
-
-
-
-
+  <script src="https://cdn.jsdelivr.net/npm/tz-lookup@6.1.25"></script>
   <script src="app.js"></script>
-
-  <script>
-
-  </script>
 </body>
 
 </html>
