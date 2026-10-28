@@ -122,14 +122,19 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     window.addEventListener('resize', updateDockHeight);
     updateDockHeight();
 
-    el('shareBtn').addEventListener('click', () => {
+    let shareUsed = false;
+    function shareSpot() {
         const center = map.getCenter().wrap();
         const pad = n => String(n).padStart(2, '0');
         const dateStr = `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
         const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${+center.lat.toFixed(6)}&lng=${+center.lng.toFixed(6)}&date=${dateStr}`;
         copyToClipboard(shareUrl);
         showToast('Link copied to clipboard');
-    });
+        shareUsed = true;
+        hideShareHint();
+    }
+    el('shareBtn').addEventListener('click', shareSpot);
+    el('shareFab').addEventListener('click', shareSpot);
 
     function copyToClipboard(text) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -346,7 +351,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
           target: () => el('windows'), radius: '24px', place: 'above' },
         { title: 'Day and sun path', text: 'Change the day here, or open the arrow to see the sun path with sunrise and sunset.',
           target: () => document.querySelector('.dock-row'), radius: '24px', place: 'above' },
-        { title: 'Location and menu', text: 'The lower button takes you to where you are, shown as a smiley dot. The top menu has zoom, sharing and Show tips again.',
+        { title: 'Location and menu', text: 'The top menu has more options, below that you can zoom to your current location, or share the selected day & location to plan your shoot.',
           target: () => el('tools'), radius: '24px', place: 'below' }
     ];
     let tourIdx = 0, tourTimer = null, tourPoll = null, tourReturn = null;
@@ -1559,7 +1564,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         const hit = (b, pad) => b && b.width > 0 && b.height > 0 && !(b.right + pad <= r.left || b.left - pad >= r.right || b.bottom + pad <= r.top || b.top - pad >= r.bottom);
         const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
         if (hit({ left: cx, right: cx, top: cy, bottom: cy, width: 1, height: 1 }, 28)) return true;
-        return ['dock', 'searchToggle', 'toolsBtn', 'locateBtn', 'attribToggle'].some(id => hit(el(id).getBoundingClientRect(), 4));
+        return ['dock', 'searchToggle', 'toolsBtn', 'locateBtn', 'shareFab', 'attribToggle'].some(id => hit(el(id).getBoundingClientRect(), 4));
     }
     function supportSchedule() {
         if (sShown || sTimer || !sStarted || !supportEligible()) return;
@@ -1642,6 +1647,48 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !privacyPanel.hidden) { e.preventDefault(); setPrivacyPanel(false, true); } });
     document.addEventListener('pointerdown', e => { if (!privacyPanel.hidden && !privacyPanel.contains(e.target) && !toolsBtn.contains(e.target)) setPrivacyPanel(false, false); });
     map.on('dragstart', () => { if (!privacyPanel.hidden) setPrivacyPanel(false, false); });
+
+    const SHARE_HINT = { IDLE_MS: 10000, SHOW_MS: 10000, MAX_SHOWS: 3, FADE_MS: 400 };
+    const shareWrap = el('shareWrap');
+    let shareHintOn = false, shareHintShown = 0, shareIdleSince = 0, shareHintAt = 0, shareHintKey = '', shareHintFade = null;
+    const sharePosKey = () => { const c = map.getCenter(); return c.lat.toFixed(4) + ',' + c.lng.toFixed(4) + ',' + map.getZoom(); };
+    function shareHintBlocked() {
+        return document.hidden || tourOpen || tourQueued || !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !privacyPanel.hidden
+            || !supportPrompt.hidden || !consentBanner.hidden || appRoot.classList.contains('is-searching') || mapEl.classList.contains('is-moving');
+    }
+    function showShareHint() {
+        clearTimeout(shareHintFade);
+        shareHintOn = true;
+        shareHintShown++;
+        shareHintAt = Date.now();
+        shareHintKey = sharePosKey();
+        shareWrap.classList.remove('is-leaving');
+        shareWrap.classList.add('is-hint');
+    }
+    function hideShareHint() {
+        shareIdleSince = 0;
+        if (!shareHintOn) return;
+        shareHintOn = false;
+        shareWrap.classList.remove('is-hint');
+        shareWrap.classList.add('is-leaving');
+        clearTimeout(shareHintFade);
+        shareHintFade = setTimeout(() => shareWrap.classList.remove('is-leaving'), (reducedMotion() ? 200 : SHARE_HINT.FADE_MS) + 60);
+    }
+    setInterval(() => {
+        if (shareHintOn) {
+            if (shareHintBlocked() || Date.now() - shareHintAt >= SHARE_HINT.SHOW_MS) hideShareHint();
+            return;
+        }
+        if (shareUsed || shareHintShown >= SHARE_HINT.MAX_SHOWS || shareHintBlocked()) { shareIdleSince = 0; return; }
+        if (!shareIdleSince) { shareIdleSince = Date.now(); return; }
+        if (Date.now() - shareIdleSince > SHARE_HINT.IDLE_MS && sharePosKey() !== shareHintKey) showShareHint();
+    }, 500);
+    map.on('movestart zoomstart', hideShareHint);
+    map.on('moveend zoomend', () => { shareIdleSince = 0; });
+    document.addEventListener('pointerdown', e => {
+        if (shareHintOn && e.target.closest && e.target.closest('button, a, input, select, textarea, [role="button"], .sun-chevron-hit, .leaflet-control')) hideShareHint();
+    }, true);
+
     const dateMatch = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(dateParam || '');
     if (dateMatch) {
         const day = Number(dateMatch[1]);

@@ -60,6 +60,7 @@
   --gap: 16px;
   --ctl: 46px;
   --stack-gap: 8px;
+  --stack-h: calc(3 * var(--ctl) + 3 * var(--stack-gap));
   --dock-h: 140px;
   --dock-w: min(560px, calc(100vw - 2 * var(--gap) - var(--safe-l) - var(--safe-r)));
   --dock-left: calc(50% - var(--dock-w) / 2 + (var(--safe-l) - var(--safe-r)) / 2);
@@ -270,7 +271,7 @@ html.lg-distort .glass:not(.welcome-sheet), html.lg-distort .leaflet-popup-conte
 .tools > * { pointer-events: auto; }
 .tools .ctl[aria-expanded="true"] { box-shadow: var(--shadow), inset 0 1px 0 var(--inner-hi), inset 0 0 0 999px var(--wash); }
 .menu {
-  position: absolute; z-index: 3; top: calc(2 * var(--ctl) + 2 * var(--stack-gap)); right: 0; width: 232px; padding: 6px; border-radius: 26px;
+  position: absolute; z-index: 3; top: var(--stack-h); right: 0; width: 232px; padding: 6px; border-radius: 26px;
   display: flex; flex-direction: column; gap: 2px; transform-origin: 100% 0; animation: menuIn 0.4s var(--spring) both;
 }
 .menu[hidden] { display: none; }
@@ -287,6 +288,32 @@ a.menu-item { text-decoration: none; }
 .menu-item:active { transform: scale(0.98); }
 .menu-item:disabled { opacity: 0.4; cursor: default; }
 .menu-sep { height: 1px; margin: 4px 12px; background: var(--hairline); }
+.share-wrap { position: relative; flex: none; width: var(--ctl); height: var(--ctl); }
+.share-ring {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  opacity: 0; transition: opacity 0.4s ease;
+  box-shadow: 0 0 0 2px rgb(var(--amber-rgb) / 0.55), 0 0 14px 3px rgb(var(--amber-rgb) / 0.4);
+}
+.share-wrap.is-hint .share-ring { opacity: 1; }
+.share-wrap.is-hint .share-ring, .share-wrap.is-leaving .share-ring { animation: share-glow 1.6s ease-in-out infinite; }
+@keyframes share-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgb(var(--amber-rgb) / 0.45), 0 0 10px 1px rgb(var(--amber-rgb) / 0.30); }
+  50% { box-shadow: 0 0 0 3px rgb(var(--amber-rgb) / 0.85), 0 0 24px 6px rgb(var(--amber-rgb) / 0.55); }
+}
+.tools .share-hint {
+  position: absolute; z-index: 1; right: calc(100% + 10px); top: 50%;
+  display: flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 99px;
+  font-size: 14px; font-weight: 300; line-height: 1; letter-spacing: 0.01em; white-space: nowrap; color: var(--text);
+  pointer-events: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  opacity: 0; visibility: hidden; transform: translate(8px, -50%);
+  transition: opacity 0.4s ease, transform 0.4s var(--ease), visibility 0s linear 0.4s;
+}
+.share-wrap.is-hint .share-hint { opacity: 1; visibility: visible; transform: translate(0, -50%); transition-delay: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  .share-wrap.is-hint .share-ring, .share-wrap.is-leaving .share-ring { animation: none; box-shadow: 0 0 0 3px rgb(var(--amber-rgb) / 0.6), 0 0 14px 2px rgb(var(--amber-rgb) / 0.4); }
+  .share-ring { transition: opacity 0.2s; }
+  .tools .share-hint { transform: translate(0, -50%); transition: opacity 0.2s, visibility 0s linear 0.2s; }
+}
 .dock {
   position: fixed; z-index: 500;
   left: var(--dock-left); width: var(--dock-w);
@@ -767,7 +794,7 @@ a.menu-item { text-decoration: none; }
 .support-prompt {
   --sp-x: -50%; --sp-dy: -8px;
   position: fixed; z-index: 470; left: 50%; right: auto; bottom: auto;
-  top: calc(var(--safe-t) + var(--gap) + 2 * var(--ctl) + var(--stack-gap) + 8px);
+  top: calc(var(--safe-t) + var(--gap) + 3 * var(--ctl) + 2 * var(--stack-gap) + 8px);
   width: min(360px, calc(100vw - 2 * var(--gap) - var(--safe-l) - var(--safe-r)));
   opacity: 0; visibility: hidden; pointer-events: none;
   transform: translate(var(--sp-x), var(--sp-dy)) scale(0.97);
@@ -793,9 +820,9 @@ a.menu-item { text-decoration: none; }
 }
 
 .support-panel {
-  position: absolute; z-index: 3; top: calc(2 * var(--ctl) + 2 * var(--stack-gap)); right: 0;
+  position: absolute; z-index: 3; top: var(--stack-h); right: 0;
   width: min(328px, calc(100vw - 2 * var(--gap) - var(--safe-l) - var(--safe-r)));
-  max-height: calc(100dvh - 2 * var(--ctl) - 2 * var(--stack-gap) - 2 * var(--gap) - var(--safe-t) - var(--safe-b));
+  max-height: calc(100dvh - var(--stack-h) - 2 * var(--gap) - var(--safe-t) - var(--safe-b));
   overflow-x: hidden; overflow-y: auto; transform-origin: 100% 0; animation: menuIn 0.4s var(--spring) both;
 }
 .support-panel[hidden] { display: none; }
