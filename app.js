@@ -1306,7 +1306,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const DAY_MS = 86400000;
     const SUPPORT_FORCED = params.get('support') === '1';
 
-    const donateUrl = n => 'https://www.paypal.com/donate?business=' + SUPPORT.PAYPAL_MERCHANT_ID + '&amount=' + n + '&currency_code=' + SUPPORT.CURRENCY;
+    const donateUrl = n => 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + SUPPORT.PAYPAL_MERCHANT_ID + '&amount=' + n + '&currency_code=' + SUPPORT.CURRENCY + '&item_name=Golden+Hour+Map+support&no_shipping=1';
     document.querySelectorAll('[data-amounts]').forEach(box => {
         SUPPORT.AMOUNTS.forEach(n => {
             const link = document.createElement('a');
