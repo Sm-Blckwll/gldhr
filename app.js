@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     'use strict';
 
     const GA_ID = 'G-S5ZJW576QK';
+    const LOCATE_ZOOM = 15;
 
     const SUPPORT = {
         MIN_VISIT_DAYS: 2,
@@ -47,17 +48,49 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     const map = L.map('map', mapOptions);
 
-    L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    const IMAGERY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    const LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+    const TILE_LOADING = { keepBuffer: 4, updateWhenIdle: false, updateWhenZooming: false };
+
+    L.tileLayer(IMAGERY_URL, {
         attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS User Community',
-        maxZoom: 18
+        maxZoom: 18,
+        ...TILE_LOADING
     }).addTo(map);
 
-    const versionText = (el('appVersion').textContent || '').trim();
-    {
-        const wv = el('welcomeVer'), sp = document.createElement('span');
-        sp.setAttribute('aria-hidden', 'true'); sp.textContent = ' \u2728';
-        wv.textContent = ''; wv.append(versionText, sp);
-    }
+    map.createPane('labels');
+    map.getPane('labels').style.zIndex = 250;
+    map.getPane('labels').style.pointerEvents = 'none';
+    L.tileLayer(LABELS_URL, {
+        pane: 'labels',
+        maxZoom: 18,
+        ...TILE_LOADING
+    }).addTo(map);
+
+    map.whenReady(() => {
+        const conn = navigator.connection;
+        if (conn && conn.saveData) return;
+        const preload = () => {
+            const z0 = Math.round(map.getZoom());
+            const c = map.getCenter();
+            [[z0 - 1, 1], [z0 + 1, 2]].forEach(([z, span]) => {
+                if (z < map.getMinZoom() || z > map.getMaxZoom()) return;
+                const p = map.project(c, z).divideBy(256);
+                const n = Math.pow(2, z);
+                const first = span === 1 ? Math.floor(p.x) : Math.round(p.x) - 1;
+                const firstY = span === 1 ? Math.floor(p.y) : Math.round(p.y) - 1;
+                for (let dx = 0; dx < span; dx++) {
+                    for (let dy = 0; dy < span; dy++) {
+                        const y = firstY + dy;
+                        if (y < 0 || y >= n) continue;
+                        const x = ((first + dx) % n + n) % n;
+                        [IMAGERY_URL, LABELS_URL].forEach(url => { new Image().src = L.Util.template(url, { z, y, x }); });
+                    }
+                }
+            });
+        };
+        if (window.requestIdleCallback) requestIdleCallback(preload, { timeout: 4000 }); else setTimeout(preload, 1500);
+    });
 
     const toast = el('toast');
     let toastTimer = null;
@@ -76,16 +109,13 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     }
 
     const dock = el('dock');
-    const status = el('status');
     const refs = {
-        pmTz: el('pmTz'), placeMeta: el('placeMeta'),
         amFrom: el('amFrom'), amTo: el('amTo'), pmFrom: el('pmFrom'), pmTo: el('pmTo'),
         sunriseTime: el('sunriseTime'), sunsetTime: el('sunsetTime'),
         sunriseDir: el('sunriseDir'), sunsetDir: el('sunsetDir'),
         miniAm: el('miniAm'), miniPm: el('miniPm'), nowAm: el('nowAm'), nowPm: el('nowPm'),
         windows: el('windows'), notice: el('notice'),
-        noticeTitle: el('noticeTitle'), noticeText: el('noticeText'), noticeIcon: el('noticeIcon'),
-        statusMain: el('statusMain')
+        noticeTitle: el('noticeTitle'), noticeText: el('noticeText'), noticeIcon: el('noticeIcon')
     };
     let lastSignature = '';
     let sunInfo = null;
@@ -157,7 +187,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
             for (let i = 0; i < parts.length - 1; i++) scopes.push('; domain=.' + parts.slice(i).join('.'));
             scopes.push('; domain=' + location.hostname);
             names.forEach(n => scopes.forEach(sc => { document.cookie = n + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + sc; }));
-        } catch (e) {  }
+        } catch (e) { }
     }
     function gtag() { window.dataLayer.push(arguments); }
     function loadGoogleAnalytics(id) {
@@ -191,15 +221,32 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     if (consent === 'granted') loadGoogleAnalytics(GA_ID); else if (browserSignal) stopAnalytics();
 
     const SIGNAL_TEXT = 'Your browser is sending a Do Not Track or Global Privacy Control signal, so analytics is off.';
+    const consentBanner = el('consentBanner');
+    let consentTimer = null;
+    const consentNeeded = () => !browserSignal && consent === null;
+    function showConsentBanner() {
+        clearTimeout(consentTimer);
+        if (!consentNeeded() || !consentBanner.hidden) return;
+        consentBanner.hidden = false;
+        requestAnimationFrame(() => consentBanner.classList.add('show'));
+        announce('We use Google Analytics to understand how the site is used. Accept or decline, your choice.');
+    }
+    function hideConsentBanner() {
+        clearTimeout(consentTimer);
+        if (consentBanner.hidden) return;
+        const hadFocus = consentBanner.contains(document.activeElement);
+        consentBanner.classList.remove('show');
+        setTimeout(() => { consentBanner.hidden = true; }, reducedMotion() ? 0 : 350);
+        if (hadFocus) el('toolsBtn').focus({ preventScroll: true });
+    }
+    function consentWelcomeClosed() {
+        clearTimeout(consentTimer);
+        if (tourQueued || tourOpen) return;
+        if (consentNeeded()) consentTimer = setTimeout(showConsentBanner, 600);
+    }
+
     function refreshConsentUI() {
-        const ask = !browserSignal && consent === null;
-        el('startButton').textContent = ask ? 'Accept & get started' : 'Get started';
-        el('declineButton').hidden = !ask;
-        el('consentAsk').hidden = !ask;
-        el('consentKnown').hidden = ask;
-        const state = consent === 'granted' ? 'on' : 'off';
-        el('consentKnownText').textContent = browserSignal ? SIGNAL_TEXT
-            : `Analytics cookies are ${state}. You can change this any time in the menu under Privacy & cookies.`;
+        if (!consentNeeded()) hideConsentBanner();
         el('prvStatus').textContent = browserSignal ? SIGNAL_TEXT
             : consent === 'granted' ? 'Analytics cookies are on. Thank you, this helps improve the site.'
             : consent === 'denied' ? 'Analytics cookies are off.'
@@ -208,11 +255,21 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         el('prvDeny').setAttribute('aria-pressed', String(consent === 'denied'));
         el('prvAllow').disabled = browserSignal;
     }
-
     const welcome = el('welcome');
     const appRoot = el('app');
-    const hint = el('hint');
+    let tourQueued = false, tourOpen = false;
     let welcomeOpener = null;
+
+    const welcomeVideo = el('welcomeVideo');
+    const welcomeVideoAllowed = !(reducedMotion() || (navigator.connection && navigator.connection.saveData));
+    if (welcomeVideoAllowed) {
+        welcomeVideo.addEventListener('playing', () => welcomeVideo.classList.add('ready'));
+    } else {
+        welcomeVideo.pause();
+        welcomeVideo.removeAttribute('src');
+        welcomeVideo.load();
+        welcomeVideo.parentElement.classList.add('no-video');
+    }
 
     function openWelcome(opener) {
         welcomeOpener = opener || null;
@@ -220,6 +277,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         appRoot.setAttribute('inert', '');
         el('toast').setAttribute('inert', '');
         requestAnimationFrame(() => welcome.classList.add('open'));
+        if (welcomeVideoAllowed) { const pr = welcomeVideo.play(); if (pr && pr.catch) pr.catch(() => {}); }
         refreshConsentUI();
         focusWelcome();
     }
@@ -229,27 +287,36 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         welcome.classList.remove('open');
         appRoot.removeAttribute('inert');
         el('toast').removeAttribute('inert');
-        setTimeout(() => { welcome.hidden = true; }, reducedMotion() ? 0 : 320);
+        setTimeout(() => { welcome.hidden = true; welcomeVideo.pause(); }, reducedMotion() ? 0 : 320);
         if (welcomeOpener && welcomeOpener.focus) welcomeOpener.focus({ preventScroll: true });
-        maybeShowHint();
+        maybeStartTour();
         supportWelcomeClosed();
+        consentWelcomeClosed();
     }
 
     appRoot.setAttribute('inert', '');
     refreshConsentUI();
     focusWelcome();
 
-    el('startButton').addEventListener('click', () => {
-        const wasAsking = !browserSignal && consent === null;
-        const ok = wasAsking ? setConsent('granted') : true;
-        closeWelcome();
-        if (!ok) showToast('Your browser blocks storage, so analytics stays off.');
+    el('startButton').addEventListener('click', () => closeWelcome());
+    el('startButton').addEventListener('click', e => {
+        if (reducedMotion()) return;
+        const btn = e.currentTarget;
+        const r = btn.getBoundingClientRect();
+        const size = Math.max(r.width, r.height) * 2.2;
+        const ripple = document.createElement('span');
+        ripple.className = 'welcome-ripple';
+        ripple.setAttribute('aria-hidden', 'true');
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = (e.detail === 0 ? r.width / 2 : e.clientX - r.left) + 'px';
+        ripple.style.top = (e.detail === 0 ? r.height / 2 : e.clientY - r.top) + 'px';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
     });
-    el('declineButton').addEventListener('click', () => {
-        setConsent('denied');
-        closeWelcome();
+    el('consentAccept').addEventListener('click', () => {
+        if (setConsent('granted')) showToast('Analytics cookies are on'); else showToast('Your browser blocks storage, so analytics stays off.');
     });
-
+    el('consentDecline').addEventListener('click', () => { setConsent('denied'); showToast('Analytics cookies are off'); });
     welcome.addEventListener('keydown', e => {
         if (e.key === 'Escape' && welcomeOpener) { closeWelcome(); return; }
         if (e.key === 'Tab') {
@@ -264,20 +331,151 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     el('infoBtn').addEventListener('click', () => openWelcome(el('toolsBtn')));
 
-    function maybeShowHint() {
-        let seen = false;
-        try { seen = localStorage.getItem('ghm-hint-seen') === '1'; } catch (e) {  }
-        if (seen || !hint.hidden) return;
-        hint.hidden = false;
-        requestAnimationFrame(() => hint.classList.add('show'));
+    const TOUR_KEY = 'ghm-tour-done';
+    const tourCard = el('tourCard');
+    const tourRing = el('tourRing');
+    const tourNext = el('tourNext');
+    const tourBack = el('tourBack');
+    const tourSkip = el('tourSkip');
+    const tourDots = el('tourDots');
+    const tourSteps = [
+        { title: 'Pick a spot', text: 'Drag the map so the dot sits on your chosen location. The time will update live.',
+          target: () => document.querySelector('.map-centre'), size: 22, radius: '50%', place: 'below' },
+        { title: 'Search', text: 'Looking for somewhere specific? Search for a town, street or landmark and the map moves there.',
+          target: () => el('searchToggle'), radius: '50%', place: 'below' },
+        { title: 'Golden hour times', text: 'Tap Morning or Evening to pin a guide line on the map. Hover the white arrows to line the sun up with the view.',
+          target: () => el('windows'), radius: '24px', place: 'above' },
+        { title: 'Day and sun path', text: 'Change the day here, or open the arrow to see the sun path with sunrise and sunset.',
+          target: () => document.querySelector('.dock-row'), radius: '24px', place: 'above' },
+        { title: 'Location and menu', text: 'The lower button takes you to where you are, shown as a smiley dot. The top menu has zoom, sharing and Show tips again.',
+          target: () => el('tools'), radius: '24px', place: 'below' }
+    ];
+    let tourIdx = 0, tourTimer = null, tourPoll = null, tourReturn = null;
+
+    function tourDone() {
+        try { return localStorage.getItem(TOUR_KEY) === '1' || localStorage.getItem('ghm-hint-seen') === '1'; } catch (e) { return false; }
     }
-    function dismissHint() {
-        if (hint.hidden) return;
-        hint.classList.remove('show');
-        setTimeout(() => { hint.hidden = true; }, 300);
-        try { localStorage.setItem('ghm-hint-seen', '1'); } catch (e) {  }
+    function tourRect(step) {
+        const t = step.target();
+        if (!t) return null;
+        const r = t.getBoundingClientRect();
+        if (step.size) { const h = step.size / 2; return { left: r.left - h, top: r.top - h, width: step.size, height: step.size, right: r.left + h, bottom: r.top + h }; }
+        return r.width > 0 && r.height > 0 ? r : null;
     }
-    map.on('movestart', () => { if (!welcome.classList.contains('open')) dismissHint(); });
+    function tourPlace(instant) {
+        if (!tourOpen) return;
+        const step = tourSteps[tourIdx];
+        const M = 12, GAP = 14, PAD = 6;
+        const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+        const cw = tourCard.offsetWidth, ch = tourCard.offsetHeight;
+        const r = tourRect(step);
+        let left, top;
+        if (r) {
+            const below = r.bottom + PAD + GAP + ch <= vh - M;
+            const above = r.top - PAD - GAP - ch >= M;
+            let useBelow = step.place === 'below';
+            if (useBelow && !below && above) useBelow = false;
+            else if (!useBelow && !above && below) useBelow = true;
+            else if (!below && !above) useBelow = (vh - r.bottom) >= r.top;
+            left = r.left + r.width / 2 - cw / 2;
+            top = useBelow ? r.bottom + PAD + GAP : r.top - PAD - GAP - ch;
+            tourRing.hidden = false;
+            tourRing.style.left = Math.round(r.left - PAD) + 'px';
+            tourRing.style.top = Math.round(r.top - PAD) + 'px';
+            tourRing.style.width = Math.round(r.width + 2 * PAD) + 'px';
+            tourRing.style.height = Math.round(r.height + 2 * PAD) + 'px';
+            tourRing.style.borderRadius = step.radius;
+        } else {
+            tourRing.hidden = true;
+            left = (vw - cw) / 2;
+            top = vh - ch - 140;
+        }
+        left = Math.max(M, Math.min(left, vw - cw - M));
+        top = Math.max(M, Math.min(top, vh - ch - M));
+        if (instant) { tourCard.classList.add('is-placing'); tourRing.classList.add('is-placing'); }
+        tourCard.style.left = Math.round(left) + 'px';
+        tourCard.style.top = Math.round(top) + 'px';
+        if (instant) {
+            void tourCard.offsetWidth;
+            tourCard.classList.remove('is-placing'); tourRing.classList.remove('is-placing');
+        }
+    }
+    function tourShow(i, instant) {
+        tourIdx = i;
+        const step = tourSteps[i];
+        const last = i === tourSteps.length - 1;
+        el('tourCount').textContent = 'Step ' + (i + 1) + ' of ' + tourSteps.length + '.';
+        el('tourTitle').textContent = step.title;
+        el('tourText').textContent = step.text;
+        Array.from(tourDots.children).forEach((d, n) => d.classList.toggle('on', n === i));
+        tourBack.hidden = i === 0;
+        tourSkip.hidden = last;
+        tourNext.textContent = last ? 'Done' : 'Next';
+        tourPlace(instant);
+        tourNext.focus({ preventScroll: true });
+    }
+    function startTour() {
+        clearTimeout(tourTimer);
+        if (tourOpen) return;
+        if (!welcome.hidden || menuIsOpen() || calOpen || !supportPanel.hidden || !privacyPanel.hidden || appRoot.classList.contains('is-searching')) {
+            tourQueued = false;
+            consentWelcomeClosed();
+            return;
+        }
+        tourQueued = false;
+        tourOpen = true;
+        tourReturn = document.activeElement;
+        document.documentElement.classList.add('tour-open');
+        tourDots.textContent = '';
+        tourSteps.forEach(() => tourDots.appendChild(document.createElement('i')));
+        tourCard.hidden = false;
+        tourShow(0, true);
+        requestAnimationFrame(() => { tourCard.classList.add('show'); tourRing.classList.add('show'); });
+        clearInterval(tourPoll);
+        tourPoll = setInterval(() => {
+            if (appRoot.classList.contains('is-searching') || menuIsOpen() || calOpen || !welcome.hidden || !supportPanel.hidden || !privacyPanel.hidden) { endTour(false); return; }
+            tourPlace(false);
+        }, 400);
+    }
+    function endTour(returnFocus) {
+        if (!tourOpen) return;
+        tourOpen = false;
+        tourQueued = false;
+        clearInterval(tourPoll);
+        try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { }
+        document.documentElement.classList.remove('tour-open');
+        tourCard.classList.remove('show');
+        tourRing.classList.remove('show');
+        const hadFocus = tourCard.contains(document.activeElement);
+        setTimeout(() => { if (!tourOpen) { tourCard.hidden = true; tourRing.hidden = true; } }, reducedMotion() ? 0 : 320);
+        if ((returnFocus !== false || hadFocus) && tourReturn && tourReturn !== document.body && document.contains(tourReturn) && tourReturn.focus) tourReturn.focus({ preventScroll: true });
+        tourReturn = null;
+        consentWelcomeClosed();
+    }
+    function maybeStartTour() {
+        if (tourDone() || tourOpen || tourQueued) return;
+        tourQueued = true;
+        clearTimeout(tourTimer);
+        tourTimer = setTimeout(startTour, reducedMotion() ? 250 : 700);
+    }
+    tourNext.addEventListener('click', () => { if (tourIdx >= tourSteps.length - 1) endTour(true); else tourShow(tourIdx + 1, false); });
+    tourBack.addEventListener('click', () => { if (tourIdx > 0) tourShow(tourIdx - 1, false); });
+    tourSkip.addEventListener('click', () => endTour(true));
+    document.addEventListener('keydown', e => {
+        if (!tourOpen) return;
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endTour(true); return; }
+        if (!tourCard.contains(document.activeElement)) return;
+        if (e.key === 'Tab') {
+            const btns = Array.from(tourCard.querySelectorAll('button')).filter(b => !b.hidden);
+            const first = btns[0], lastBtn = btns[btns.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); lastBtn.focus(); }
+            else if (!e.shiftKey && document.activeElement === lastBtn) { e.preventDefault(); first.focus(); }
+        } else if (e.key === 'ArrowRight') { e.preventDefault(); tourNext.click(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); tourBack.click(); }
+    }, true);
+    window.addEventListener('resize', () => tourPlace(true));
+    window.addEventListener('orientationchange', () => setTimeout(() => tourPlace(true), 250));
+    el('tipsBtn').addEventListener('click', () => { clearTimeout(tourTimer); setTimeout(startTour, 80); });
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/service-worker.js')
@@ -606,7 +804,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
                 const dateStr = `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
                 const q = `?lat=${c.lat.toFixed(5)}&lng=${c.lng.toFixed(5)}&date=${dateStr}`;
                 history.replaceState(null, '', window.location.pathname + q);
-            } catch (e) {  }
+            } catch (e) { }
         }, 400);
     }
 
@@ -624,14 +822,6 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         return `${CARDINALS[Math.round(b / 45) % 8]} ${Math.round(b)}\u00b0`;
     }
 
-    function formatOffset(minutes) {
-        const sign = minutes < 0 ? '-' : '+';
-        const abs = Math.abs(minutes);
-        const h = Math.floor(abs / 60);
-        const m = abs % 60;
-        return `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
-    }
-
     function setText(node, value) {
         if (node.textContent !== value) node.textContent = value;
     }
@@ -647,7 +837,6 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     function setState(state) {
         dock.dataset.state = state;
-        status.dataset.state = state;
         refs.windows.hidden = state !== 'normal';
         refs.notice.hidden = state === 'normal';
     }
@@ -660,11 +849,6 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         const sunset = times.sunset ? new Date(times.sunset) : NaN;
 
         updateDateLabel();
-
-        const noon = moment.tz({ year: date.getFullYear(), month: date.getMonth(), day: date.getDate(), hour: 12 }, timeZone);
-        const tzText = `${timeZone} \u00b7 ${formatOffset(noon.utcOffset())}`;
-        setText(refs.pmTz, tzText);
-        refs.placeMeta.title = `Time zone ${timeZone}`;
 
         let signature;
 
@@ -681,14 +865,14 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
                 setText(refs.noticeTitle, 'Polar night');
                 setText(refs.noticeText, 'The sun stays below the horizon all day here, so there is no sunrise or sunset golden hour.');
             }
-            sunInfo = { state: dock.dataset.state, timeZone, tzText };
+            sunInfo = { state: dock.dataset.state, timeZone };
             signature = dock.dataset.state;
         } else if (isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) {
             setState('partial');
             refs.noticeIcon.setAttribute('href', '#i-sun');
             setText(refs.noticeTitle, 'No golden hour today');
             setText(refs.noticeText, 'No sunrise or sunset at this location.');
-            sunInfo = { state: 'partial', timeZone, tzText };
+            sunInfo = { state: 'partial', timeZone };
             signature = 'partial';
         } else {
             setState('normal');
@@ -713,11 +897,11 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
                 if (changedAm) pop(refs.miniAm);
                 if (changedPm) pop(refs.miniPm);
             }
-            sunInfo = { state: 'normal', timeZone, tzText, lat, lng, sunrise, sunset, amFrom, amTo, pmFrom, pmTo };
+            sunInfo = { state: 'normal', timeZone, lat, lng, sunrise, sunset, amFrom, amTo, pmFrom, pmTo };
         }
 
         drawArc();
-        updateStatus();
+        updateNow();
 
         if (signature !== lastSignature) {
             lastSignature = signature;
@@ -739,114 +923,33 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     const minuteOf = ms => Math.floor(ms / 60000);
 
-    function durText(mins) {
-        mins = Math.max(1, mins);
-        if (mins < 60) return `${mins} min`;
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return m ? `${h}h ${m}m` : `${h}h`;
-    }
-
-    function statusFor(info, nowMs) {
-        const base = { variants: [], live: false, now: null, frac: null };
-        const mk = v => Object.assign({}, base, { variants: v });
-        if (!info) return mk([['Finding golden hour\u2026', '']]);
-        if (info.state === 'polar-day') return mk([['Polar day \u00b7 no golden hour', ''], ['Polar day', '']]);
-        if (info.state === 'polar-night') return mk([['Polar night \u00b7 no golden hour', ''], ['Polar night', '']]);
-        if (info.state !== 'normal') return mk([['No sunrise or sunset today', ''], ['No golden hour', '']]);
-
-        const tz = info.timeZone;
-        const nowLoc = moment.tz(nowMs, tz);
+    function nowFor(info, nowMs) {
+        const out = { now: null, frac: null };
+        if (!info || info.state !== 'normal') return out;
+        const nowLoc = moment.tz(nowMs, info.timeZone);
         const sameDay = nowLoc.year() === date.getFullYear() && nowLoc.month() === date.getMonth() && nowLoc.date() === date.getDate();
+        if (!sameDay) return out;
         const sr = info.sunrise.getTime();
         const ss = info.sunset.getTime();
-
-        if (!sameDay) {
-            const diff = Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(nowLoc.year(), nowLoc.month(), nowLoc.date())) / 86400000);
-            let phrase = formatDateLabel(date);
-            let lead = 'Golden hour on ';
-            let tiny = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            if (diff === 1) { lead = 'Golden hour '; phrase = 'tomorrow'; tiny = 'Tomorrow'; }
-            else if (diff === -1) { lead = 'Golden hour '; phrase = 'yesterday'; tiny = 'Yesterday'; }
-            else if (diff > 1 && diff <= 45) { lead = 'Golden hour '; phrase = `in ${diff} days`; tiny = `In ${diff} days`; }
-            else if (diff < -1 && diff >= -45) { lead = 'Golden hour '; phrase = `${-diff} days ago`; tiny = `${-diff} days ago`; }
-            return mk([
-                ['Golden hour ', `${info.amFrom}\u2013${info.amTo} \u00b7 ${info.pmFrom}\u2013${info.pmTo}`],
-                [lead, phrase],
-                ['', tiny]
-            ]);
-        }
-
         const nowMin = minuteOf(nowMs);
         const am0 = minuteOf(sr), am1 = minuteOf(sr + 3600000);
         const pm0 = minuteOf(ss - 3600000), pm1 = minuteOf(ss);
-        const out = mk([]);
         out.frac = (nowMs >= sr && nowMs <= ss) ? (nowMs - sr) / (ss - sr) : null;
-        const nxt = m => [['Next golden hour in ', durText(m)], ['Next in ', durText(m)]];
-        const end = m => [['Golden hour ends in ', durText(m)], ['Ends in ', durText(m)]];
-        if (nowMin < am0) out.variants = nxt(am0 - nowMin);
-        else if (nowMin < am1) Object.assign(out, { variants: end(am1 - nowMin), live: true, now: 'am' });
-        else if (nowMin < pm0) out.variants = nxt(pm0 - nowMin);
-        else if (nowMin < pm1) Object.assign(out, { variants: end(pm1 - nowMin), live: true, now: 'pm' });
-        else {
-            const tomorrow = nowLoc.clone().add(1, 'day').hour(12).minute(0).second(0).millisecond(0).toDate();
-            const next = SunCalc.getTimes(tomorrow, info.lat, info.lng).sunrise;
-            if (next && !isNaN(new Date(next).getTime())) {
-                const t = formatTime(new Date(next), tz);
-                out.variants = [['Golden hour starts tomorrow ', t], ['Starts tomorrow ', t], ['Tomorrow ', t]];
-            } else {
-                out.variants = [['No more golden hour today', ''], ['No more today', '']];
-            }
-        }
+        if (nowMin >= am0 && nowMin < am1) out.now = 'am';
+        else if (nowMin >= pm0 && nowMin < pm1) out.now = 'pm';
         return out;
     }
 
-    let lastStatusKey = '';
-    function updateStatus() {
-        const s = statusFor(sunInfo, Date.now());
-        const key = JSON.stringify([s.variants, s.live]);
-        if (key !== lastStatusKey) {
-            lastStatusKey = key;
-            const main = refs.statusMain;
-            main.textContent = '';
-            s.variants.forEach(v => {
-                const span = document.createElement('span');
-                span.className = 'sm';
-                span.appendChild(document.createTextNode(v[0]));
-                if (v[1]) {
-                    const b = document.createElement('b');
-                    b.textContent = v[1];
-                    span.appendChild(b);
-                }
-                main.appendChild(span);
-            });
-            const full = s.variants[0][0] + s.variants[0][1];
-            const zone = sunInfo && sunInfo.tzText ? sunInfo.tzText.replace(/_/g, ' ').replace(' \u00b7 ', ', ') : '';
-            status.setAttribute('aria-label', zone ? `${full}. Time zone ${zone}.` : full);
-            status.title = zone;
-            status.classList.toggle('is-live', s.live);
-            fitStatus();
-        }
+    function updateNow() {
+        const s = nowFor(sunInfo, Date.now());
         refs.miniAm.classList.toggle('is-now', s.now === 'am');
         refs.miniPm.classList.toggle('is-now', s.now === 'pm');
         refs.nowAm.hidden = s.now !== 'am';
         refs.nowPm.hidden = s.now !== 'pm';
         placeNowDot(s.frac);
     }
-
-    function fitStatus() {
-        const main = refs.statusMain;
-        const spans = Array.from(main.children);
-        if (!spans.length) return;
-        for (let i = 0; i < spans.length; i++) {
-            spans.forEach((sp, j) => { sp.hidden = j !== i; });
-            if (main.scrollWidth <= main.clientWidth + 1) break;
-        }
-    }
-    window.addEventListener('resize', fitStatus);
-    setInterval(updateStatus, 15000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateStatus(); });
-
+    setInterval(updateNow, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateNow(); });
     const arcEl = el('arc');
     const ARC = { cx: 156, hy: 156, r: 150 };
     let arcNow = null;
@@ -901,11 +1004,95 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         arcNow.style.display = '';
     }
 
-
     const mapEl = el('map');
     const arrowsEl = el('sunArrows');
     const SVG_NS = 'http://www.w3.org/2000/svg';
     let arrowTimes = { rise: null, set: null };
+
+    const raysEl = svgEl('svg', { class: 'sun-rays', 'aria-hidden': 'true', focusable: 'false' });
+    arrowsEl.after(raysEl);
+    let rayAngles = { rise: null, set: null };
+    let rayBearings = { rise: null, set: null };
+    let rayKind = null;
+    let pinKind = null;
+    let raySource = null;
+
+    function rayTransform(size, angle) {
+        return `translate(${size.x / 2} ${size.y / 2}) rotate(${angle.toFixed(2)})`;
+    }
+    function buildRays(size) {
+        raysEl.textContent = '';
+        raysEl.setAttribute('viewBox', `0 0 ${size.x} ${size.y}`);
+        const len = Math.ceil(Math.hypot(size.x, size.y) / 2) + 24;
+        const defs = svgEl('defs');
+        [['sunRayLight', '#fff', 0.9, 0.1], ['sunRayDark', '#000', 0.3, 0]].forEach(g => {
+            const grad = svgEl('linearGradient', { id: g[0], gradientUnits: 'userSpaceOnUse', x1: 0, y1: 0, x2: len, y2: 0 });
+            grad.appendChild(svgEl('stop', { offset: 0, 'stop-color': g[1], 'stop-opacity': g[2] }));
+            grad.appendChild(svgEl('stop', { offset: 1, 'stop-color': g[1], 'stop-opacity': g[3] }));
+            defs.appendChild(grad);
+        });
+        raysEl.appendChild(defs);
+        ['set', 'rise'].forEach(kind => {
+            if (rayAngles[kind] === null) return;
+            const holder = svgEl('g', { class: 'sun-ray sun-ray--' + kind, transform: rayTransform(size, rayAngles[kind]) });
+            const grow = svgEl('g', { class: 'sun-ray-grow' });
+            grow.appendChild(svgEl('rect', { x: 13, y: -2.5, width: len, height: 5, rx: 2.5, fill: 'url(#sunRayDark)' }));
+            grow.appendChild(svgEl('rect', { x: 13, y: -1, width: len, height: 2, rx: 1, fill: 'url(#sunRayLight)' }));
+            holder.appendChild(grow);
+            raysEl.appendChild(holder);
+        });
+    }
+    function updateRayAngle() {
+        const kind = rayKind || pinKind;
+        if (!kind || rayBearings[kind] === null) return;
+        const node = raysEl.querySelector('.sun-ray--' + kind);
+        if (!node) return;
+        rayAngles[kind] = screenAngle(map.getCenter(), rayBearings[kind]);
+        node.setAttribute('transform', rayTransform(map.getSize(), rayAngles[kind]));
+    }
+    function showRay() {
+        raysEl.setAttribute('data-on', rayKind || pinKind || '');
+        updateRayAngle();
+    }
+    function setRay(kind, source) {
+        rayKind = kind;
+        raySource = kind ? (source || null) : null;
+        showRay();
+    }
+    function togglePin(kind) {
+        pinKind = (pinKind === kind) ? null : kind;
+        [['rise', el('miniAm')], ['set', el('miniPm')]].forEach(p => p[1] && p[1].setAttribute('aria-pressed', String(pinKind === p[0])));
+        showRay();
+    }
+    function bindPin(node, kind) {
+        if (!node) return;
+        node.setAttribute('role', 'button');
+        node.setAttribute('tabindex', '0');
+        node.setAttribute('aria-pressed', 'false');
+        node.addEventListener('click', () => togglePin(kind));
+        node.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePin(kind); } });
+    }
+
+    function bindRay(node, kind) {
+        if (!node) return;
+        node.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') setRay(kind); });
+        node.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch' && rayKind === kind) setRay(null); });
+        node.addEventListener('focusin', () => setRay(kind));
+        node.addEventListener('focusout', () => { if (rayKind === kind) setRay(null); });
+        node.addEventListener('touchstart', () => setRay(kind), { passive: true });
+        ['touchend', 'touchcancel'].forEach(t => node.addEventListener(t, () => { if (rayKind === kind) setRay(null); }, { passive: true }));
+    }
+    bindRay(el('miniAm'), 'rise');
+    bindRay(el('miniPm'), 'set');
+    bindPin(el('miniAm'), 'rise');
+    bindPin(el('miniPm'), 'set');
+    bindRay(document.querySelector('.arc-end-l'), 'rise');
+    bindRay(document.querySelector('.arc-end-r'), 'set');
+    const chevronHit = e => (e.target && e.target.closest) ? e.target.closest('.sun-chevron-hit') : null;
+    arrowsEl.addEventListener('pointerover', e => { const h = chevronHit(e); if (h && e.pointerType !== 'touch') setRay(h.dataset.kind, 'chevron'); });
+    arrowsEl.addEventListener('pointerout', e => { const h = chevronHit(e); if (h && e.pointerType !== 'touch' && rayKind === h.dataset.kind) setRay(null); });
+    arrowsEl.addEventListener('touchstart', e => { const h = chevronHit(e); if (h) setRay(h.dataset.kind, 'chevron'); }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(t => arrowsEl.addEventListener(t, () => { if (raySource === 'chevron') setRay(null); }, { passive: true }));
 
     function geoDestination(lat, lng, bearingDeg, distanceKm) {
         const R = 6378.1;
@@ -932,29 +1119,45 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     }
 
     function buildChevron(kind, angle, bearing, tip) {
-        const arm = 9;
-        const d = `M${tip - arm} ${-arm}L${tip} 0L${tip - arm} ${arm}`;
+        const half = 55 * Math.PI / 180;
+        const back = tip - 9.5 * Math.cos(half);
+        const side = 9.5 * Math.sin(half);
+        const d = `M${back.toFixed(2)} ${(-side).toFixed(2)}L${tip} 0L${back.toFixed(2)} ${side.toFixed(2)}`;
         const g = svgEl('g', { class: 'sun-chevron sun-chevron--' + kind, transform: `rotate(${angle.toFixed(2)})` });
         g.dataset.bearing = bearing.toFixed(1);
         g.dataset.angle = angle.toFixed(1);
-        ['sun-chevron-halo', 'sun-chevron-ink'].forEach(cls => g.appendChild(svgEl('path', { class: cls, d })));
+        g.appendChild(svgEl('path', { class: 'sun-chevron-ink', d }));
+        const hit = svgEl('circle', { class: 'sun-chevron-hit', cx: tip - 3, cy: 0, r: 18 });
+        hit.dataset.kind = kind;
+        g.appendChild(hit);
         return g;
     }
 
     function renderSunArrows(center) {
         arrowsEl.textContent = '';
+        rayAngles = { rise: null, set: null };
+        rayBearings = { rise: null, set: null };
         const size = map.getSize();
         arrowsEl.setAttribute('viewBox', `0 0 ${size.x} ${size.y}`);
+        const defs = svgEl('defs');
+        const shadow = svgEl('filter', { id: 'sunArrowShadow', x: '-100%', y: '-100%', width: '300%', height: '300%' });
+        shadow.appendChild(svgEl('feDropShadow', { dx: 0, dy: 1, stdDeviation: 1.5, 'flood-color': '#000', 'flood-opacity': 0.45 }));
+        defs.appendChild(shadow);
+        arrowsEl.appendChild(defs);
         const tip = Math.max(91, Math.min(200, Math.min(size.x, size.y) * 0.17));
         ['set', 'rise'].forEach(kind => {
             const time = arrowTimes[kind];
             if (!time) return;
             const bearing = bearingAt(time, center.lat, center.lng);
             const angle = screenAngle(center, bearing);
-            const holder = svgEl('g', { transform: `translate(${size.x / 2} ${size.y / 2})` });
+            rayAngles[kind] = angle;
+            rayBearings[kind] = bearing;
+            const holder = svgEl('g', { transform: `translate(${size.x / 2} ${size.y / 2})`, filter: 'url(#sunArrowShadow)' });
             holder.appendChild(buildChevron(kind, angle, bearing, tip));
             arrowsEl.appendChild(holder);
         });
+        buildRays(size);
+        if (raySource === 'chevron' && !arrowsEl.querySelector('.sun-chevron-hit:hover')) setRay(null);
     }
     function drawSunArrows(center) {
         const { times } = getSunTimes(center.lat, center.lng);
@@ -1041,21 +1244,15 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     el('menuLocate').addEventListener('click', () => locateBtn.click());
 
     const expandBtn = el('expandBtn');
-    function setDockExpanded(open, persist) {
+    function setDockExpanded(open) {
         dock.dataset.expanded = String(open);
         expandBtn.setAttribute('aria-expanded', String(open));
         const label = open ? 'Hide the sun path' : 'Show the sun path';
         expandBtn.setAttribute('aria-label', label);
         expandBtn.title = label;
-        if (persist) { try { localStorage.setItem('ghm-dock', open ? 'open' : 'closed'); } catch (e) {  } }
     }
-    expandBtn.addEventListener('click', () => setDockExpanded(dock.dataset.expanded !== 'true', true));
-    (function initDock() {
-        let stored = null;
-        try { stored = localStorage.getItem('ghm-dock'); } catch (e) {  }
-        const roomy = window.matchMedia('(min-width: 900px) and (min-height: 480px)').matches;
-        setDockExpanded(stored === 'open' ? true : stored === 'closed' ? false : roomy, false);
-    })();
+    expandBtn.addEventListener('click', () => setDockExpanded(dock.dataset.expanded !== 'true'));
+    setDockExpanded(false);
 
     const attrib = el('attribution');
     const attribToggle = el('attribToggle');
@@ -1272,6 +1469,19 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const geo = L.geolet({
         position: 'bottomleft',
         className: 'locDot',
+        minZoom: LOCATE_ZOOM,
+        marker() {
+            return L.marker(null, {
+                icon: L.divIcon({
+                    html: '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><circle cx="6.6" cy="7.2" r="1.1" fill="#1a1a1a"/><circle cx="11.4" cy="7.2" r="1.1" fill="#1a1a1a"/><path d="M5.8 10.8Q9 13.8 12.2 10.8" fill="none" stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round"/></svg>',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9],
+                    className: 'loc-me'
+                }),
+                attribution: '<a href="https://github.com/rhlt/leaflet-geolet" target="_blank">Geolet</a>',
+                zIndexOffset: 1000
+            });
+        },
         popupContent(latlng) {
             return `Your location: ${latlng.lat}, ${latlng.lng}`;
         }
@@ -1354,14 +1564,14 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         return sState.sessions >= 2 && sActions >= SUPPORT.MIN_ACTIONS;
     }
     function supportOverlayOpen() {
-        return !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !supportPanel.hidden || !privacyPanel.hidden || appRoot.classList.contains('is-searching');
+        return tourOpen || !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !supportPanel.hidden || !privacyPanel.hidden || appRoot.classList.contains('is-searching');
     }
     function supportCollides() {
         const r = supportPrompt.getBoundingClientRect();
         const hit = (b, pad) => b && b.width > 0 && b.height > 0 && !(b.right + pad <= r.left || b.left - pad >= r.right || b.bottom + pad <= r.top || b.top - pad >= r.bottom);
         const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
         if (hit({ left: cx, right: cx, top: cy, bottom: cy, width: 1, height: 1 }, 28)) return true;
-        return ['dock', 'status', 'searchToggle', 'toolsBtn', 'locateBtn', 'attribToggle', 'placeMeta'].some(id => hit(el(id).getBoundingClientRect(), 4));
+        return ['dock', 'searchToggle', 'toolsBtn', 'locateBtn', 'attribToggle'].some(id => hit(el(id).getBoundingClientRect(), 4));
     }
     function supportSchedule() {
         if (sShown || sTimer || !sStarted || !supportEligible()) return;

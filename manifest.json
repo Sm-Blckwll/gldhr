@@ -60,12 +60,6 @@
   "dir": "auto",
   "lang": "en",
   "orientation": "any",
-  "display_override": [
-    "standalone",
-    "minimal-ui",
-    "fullscreen",
-    "window-controls-overlay",
-    "browser"
-  ],
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "prefer_related_applications": false
 }

@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-GHM-v4.1";
+const CACHE = "pwabuilder-GHM-v4.1.1";
 const ASSET_CACHE = CACHE + "-assets";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
@@ -59,7 +59,7 @@ self.addEventListener('install', (event) => {
       try {
         const request = new Request(url, { mode: 'no-cors' });
         await assets.put(request, await fetch(request));
-      } catch (e) {  }
+      } catch (e) { }
     }));
   })());
 });

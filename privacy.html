@@ -16,8 +16,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
-<style>
-    :root {
+<style>    :root {
       --bg: #eef1f5; --card: rgb(255 255 255 / 0.72); --edge: rgb(13 18 32 / 0.1);
       --text: #0d1220; --text-2: #242b3f; --text-3: #3b445a; --amber: #f5a00b; --amber-text: #8a4e00; --on-amber: #2a1700; --focus: #0b63ce;
     }
@@ -55,7 +54,7 @@
     th { color: var(--text); font-weight: 750; }
     .wrap { overflow-x: auto; }
     @media (max-width: 480px) { main { padding: 22px 18px 26px; border-radius: 24px; } h1 { font-size: 28px; } }
-  </style>
+</style>
 </head>
 
 <body>
@@ -73,7 +72,7 @@
     <p>Until you choose, no analytics script is loaded and no analytics cookies are set. The site has no accounts, no sign-up and no advertising. We do not run a server that receives your data: the site is a static page hosted on GitHub Pages and everything else happens in your browser.</p>
 
     <h2>Analytics cookies (only if you accept)</h2>
-    <p>If you choose "Accept &amp; get started" (or "Accept" in the menu under Privacy &amp; cookies), we load Google Analytics 4 (measurement ID <code>G-S5ZJW576QK</code>) to see how the site is used so we can improve it.</p>
+    <p>If you choose "Accept" on the cookie notice that appears over the map when you first use the site (or "Accept" in the menu under Privacy &amp; cookies), we load Google Analytics 4 (measurement ID <code>G-S5ZJW576QK</code>) to see how the site is used so we can improve it.</p>
     <div class="wrap">
       <table>
         <thead><tr><th>Cookie</th><th>What it does</th><th>Lasts</th></tr></thead>
@@ -101,8 +100,9 @@
     <ul>
       <li><code>ghm-consent-v2</code>: your analytics choice and its date.</li>
       <li><code>ghm-dock</code>: whether the details panel is open or closed.</li>
-      <li><code>ghm-hint-seen</code>: that you have seen the "move the map" hint.</li>
+      <li><code>ghm-hint-seen</code>: that you saw the older "move the map" hint, kept only so returning visitors are not shown the new tips.</li>
       <li><code>ghm-support</code>: when we last showed the optional support message, so we do not repeat it.</li>
+      <li><code>ghm-tour-done</code>: that you have finished or skipped the first-visit tips, so they are not shown again.</li>
     </ul>
     <p>The app also keeps a copy of its own files in your browser (a service worker cache) so it can work offline.</p>
 

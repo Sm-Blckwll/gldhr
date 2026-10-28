@@ -63,7 +63,12 @@
   <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
   <meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#12151d" media="(prefers-color-scheme: dark)">
-  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+<link rel="dns-prefetch" href="https://server.arcgisonline.com">
+<link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
   <link rel="stylesheet" href="Control.OSMGeocoder.css" />
   <link rel="stylesheet" href="base.css" />
@@ -72,13 +77,37 @@
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
+      <filter id="liquid-glass" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+        <feImage href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='rgb(255,0,0)'/><stop offset='.08' stop-color='rgb(184,0,0)'/><stop offset='.2' stop-color='rgb(128,0,0)'/><stop offset='.8' stop-color='rgb(128,0,0)'/><stop offset='.92' stop-color='rgb(72,0,0)'/><stop offset='1' stop-color='rgb(0,0,0)'/></linearGradient></defs><rect width='100' height='100' fill='url(%23g)'/></svg>" preserveAspectRatio="none" result="mapX" />
+        <feImage href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(0,255,0)'/><stop offset='.08' stop-color='rgb(0,184,0)'/><stop offset='.2' stop-color='rgb(0,128,0)'/><stop offset='.8' stop-color='rgb(0,128,0)'/><stop offset='.92' stop-color='rgb(0,72,0)'/><stop offset='1' stop-color='rgb(0,0,0)'/></linearGradient></defs><rect width='100' height='100' fill='url(%23g)'/></svg>" preserveAspectRatio="none" result="mapY" />
+        <feComposite in="mapX" in2="mapY" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="lensMap" />
+        <feDisplacementMap id="liquidGlassMap" in="SourceGraphic" in2="lensMap" scale="16" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+  <script>
+    (function () {
+      try {
+        var ua = navigator.userAgent, uad = navigator.userAgentData, root = document.documentElement;
+        var chromium = (uad && uad.brands && uad.brands.some(function (b) { return /Chromium/.test(b.brand); })) || (/Chrome\//.test(ua) && !/CriOS|FxiOS|Firefox/.test(ua));
+        var scale = parseFloat(getComputedStyle(root).getPropertyValue('--glass-distort'));
+        if (isNaN(scale)) scale = 16;
+        if (!chromium || !(scale > 0)) return;
+        document.getElementById('liquidGlassMap').setAttribute('scale', scale);
+        root.classList.add('lg-distort');
+      } catch (e) { }
+    })();
+
+</script>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
       <linearGradient id="gSun" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#ffd46b" />
         <stop offset="1" stop-color="#f5a00b" />
       </linearGradient>
     </defs>
-    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M3 18.5h18M7 18.5a5 5 0 0 1 10 0M12 6.5v3.2M5.2 10.7l1.9 1.9M18.8 10.7l-1.9 1.9M9.4 5.6 12 3l2.6 2.6" /></symbol>
-    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M3 18.5h18M7 18.5a5 5 0 0 1 10 0M12 6.5v3.2M5.2 10.7l1.9 1.9M18.8 10.7l-1.9 1.9M9.4 3.6 12 6.2l2.6-2.6" /></symbol>
+    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M4 19h16M7 19a5 5 0 0 1 10 0M12 10.5v-7M9 6.5l3-3 3 3" /></symbol>
+    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M4 19h16M7 19a5 5 0 0 1 10 0M12 3.5v7M9 7.5l3 3 3-3" /></symbol>
     <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5" /></symbol>
     <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9.5 5.5 6.5 6.5-6.5 6.5" /></symbol>
     <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></symbol>
@@ -103,16 +132,21 @@
     <div id="map"></div>
     <svg id="sunArrows" class="sun-arrows" aria-hidden="true" focusable="false"></svg>
 
-    <div class="crosshair" aria-hidden="true"><i class="tick t1"></i><i class="tick t2"></i><i class="tick t3"></i><i class="tick t4"></i><i class="dot"></i></div>
-    <div id="hint" class="hint glass" role="status" hidden>
-      <svg class="ic" aria-hidden="true"><use href="#i-pan" /></svg>
-      <span>Move the map to pick a spot</span>
-    </div>
-
-    <div class="status-wrap">
-      <div id="status" class="status glass" data-state="loading" role="group" aria-label="Golden hour status">
-        <i id="statusDot" class="status-dot" aria-hidden="true"></i>
-        <p id="statusMain" class="status-main"><span class="sm">Finding golden hour&hellip;</span></p>
+    <div class="map-centre" aria-hidden="true"><i class="map-centre-dot"></i></div>
+    <div id="tourRing" class="tour-ring" aria-hidden="true" hidden></div>
+    <div id="tourCard" class="tour-card glass" role="dialog" aria-labelledby="tourTitle" tabindex="-1" hidden>
+      <div id="tourBody" aria-live="polite" aria-atomic="true">
+        <p id="tourCount" class="sr-only"></p>
+        <h2 id="tourTitle" class="tour-title"></h2>
+        <p id="tourText" class="tour-text"></p>
+      </div>
+      <div class="tour-foot">
+        <div id="tourDots" class="tour-dots" aria-hidden="true"></div>
+        <div class="tour-actions">
+          <button id="tourSkip" class="tour-btn tour-btn-quiet" type="button">Skip</button>
+          <button id="tourBack" class="tour-btn tour-btn-quiet" type="button">Back</button>
+          <button id="tourNext" class="tour-btn tour-btn-main" type="button">Next</button>
+        </div>
       </div>
     </div>
 
@@ -132,6 +166,7 @@
         <button id="shareBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-share" /></svg><span>Copy share link</span></button>
         <button id="supportBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-heart" /></svg><span>Support</span></button>
         <button id="privacyBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-shield" /></svg><span>Privacy &amp; cookies</span></button>
+        <button id="tipsBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-pan" /></svg><span>Show tips again</span></button>
         <button id="infoBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-info" /></svg><span>About</span></button>
       </div>
       <div id="supportPanel" class="support-panel glass" role="dialog" aria-labelledby="spnTitle" hidden>
@@ -242,8 +277,6 @@
 
     <div id="attribution" class="attrib">
       <button id="attribToggle" class="attrib-link" type="button" aria-expanded="false" aria-controls="attribPop" aria-haspopup="dialog">Attribution</button>
-      <span class="attrib-dot" aria-hidden="true">&middot;</span>
-      <p class="attrib-meta" id="placeMeta"><span class="am-in"><span class="am-seg" id="appVersion">v4.1</span><span class="am-seg" id="pmTz"></span></span></p>
       <div id="attribPop" class="attrib-pop glass" role="dialog" aria-label="Map credits" hidden>
         <div class="attrib-head"><h2>Map credits</h2><button id="attribClose" class="attrib-close" type="button" aria-label="Close credits" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
         <p id="attribText" class="attrib-text">Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, and the GIS User Community. Search: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">Nominatim</a> &copy; OpenStreetMap contributors. Map by <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, location by <a href="https://github.com/rhlt/leaflet-geolet" target="_blank" rel="noopener">Geolet</a>. <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a>.</p>
@@ -273,17 +306,26 @@
 
   <div id="welcome" class="welcome open" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
     <div class="welcome-sheet glass">
-      <p class="welcome-kicker">Golden hour calculator</p>
-      <h2 id="welcomeTitle">Golden Hour Map</h2>
-      <p class="welcome-desc">Sunrise and sunset times with the sun direction for anywhere on Earth. Get the golden hour for free, with no sign-up and no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
-      <div class="welcome-actions">
-        <button id="startButton" class="btn btn-primary" type="button">Accept &amp; get started</button>
-        <button id="declineButton" class="btn btn-secondary" type="button">Continue without analytics</button>
+      <div class="welcome-media" aria-hidden="true">
+        <video id="welcomeVideo" class="welcome-video" src="background-compressed.mp4" muted autoplay loop playsinline preload="metadata" tabindex="-1" disablepictureinpicture disableremoteplayback></video>
       </div>
-      <p class="consent" id="consentAsk">We use Google Analytics cookies to understand how the site is used and improve it. Nothing is collected unless you accept. <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a> &middot; <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">How Google uses data</a></p>
-      <p class="consent" id="consentKnown" hidden><span id="consentKnownText"></span> <a href="/privacy.html" target="_blank" rel="noopener">Privacy page</a></p>
-      <p class="welcome-ver" id="welcomeVer"></p>
-      <div class="welcome-art"><img src="/icon-512x512.png" width="512" height="512" alt="Golden Hour Map artwork: a cat resting its chin on a golden globe" decoding="async"></div>
+      <div class="welcome-noise" aria-hidden="true"></div>
+      <div class="welcome-body">
+        <h2 id="welcomeTitle">Golden Hour Map</h2>
+        <p class="welcome-desc">Find the golden hour for any location, free with no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
+        <div class="welcome-actions">
+          <button id="startButton" class="btn btn-primary" type="button">Get started</button>
+        </div>
+        <p class="welcome-links"><a href="/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="welcome-ver">v4.1.1 <span aria-hidden="true">&#10024;</span></span></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="consentBanner" class="consent-banner glass" role="region" aria-label="Analytics cookies" aria-describedby="consentText" hidden>
+    <p id="consentText" class="consent-text">We use Google Analytics to understand how the site is used. Accept or decline, your choice. <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">How Google uses data</a> &middot; <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+    <div class="consent-actions">
+      <button id="consentAccept" class="btn btn-primary btn-sm" type="button">Accept</button>
+      <button id="consentDecline" class="btn btn-secondary btn-sm" type="button">Decline</button>
     </div>
   </div>
 
