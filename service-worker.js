@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-GHM-v4.1.1";
+const CACHE = "pwabuilder-GHM-v4.1.2";
 const ASSET_CACHE = CACHE + "-assets";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
@@ -37,8 +37,7 @@ const PRECACHE_CDN = [
 const NO_CACHE_HOSTS = [
   "nominatim.openstreetmap.org",
   "www.googletagmanager.com",
-  "www.google-analytics.com",
-  "www.paypal.com"
+  "www.google-analytics.com"
 ];
 
 self.addEventListener("message", (event) => {

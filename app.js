@@ -10,14 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
         DELAY_MS: 6000,
         COOLDOWN_SHOWN_DAYS: 30,
         COOLDOWN_DISMISSED_DAYS: 60,
-        COOLDOWN_DONATED_DAYS: 180,
-        AMOUNTS: [3, 5, 10],
-        CURRENCY: 'GBP',
-        SYMBOL: '\u00a3',
-        PAYPAL_MERCHANT_ID: 'A46KHVFFHGFPL',
-        PAYPAL_HOSTED_BUTTON_ID: 'MJCKZBKJ9GJD6'
-    };
-    const el = id => document.getElementById(id);
+        COOLDOWN_DONATED_DAYS: 180
+    };    const el = id => document.getElementById(id);
     const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-height: 480px), (max-width: 799px), (max-height: 479px)').matches;
 
@@ -263,7 +257,12 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const welcomeVideo = el('welcomeVideo');
     const welcomeVideoAllowed = !(reducedMotion() || (navigator.connection && navigator.connection.saveData));
     if (welcomeVideoAllowed) {
-        welcomeVideo.addEventListener('playing', () => welcomeVideo.classList.add('ready'));
+        const showWelcomeVideo = () => welcomeVideo.classList.remove('is-loading');
+        if (welcomeVideo.readyState < 2) {
+            welcomeVideo.classList.add('is-loading');
+            ['loadeddata', 'canplay', 'playing', 'error'].forEach(ev => welcomeVideo.addEventListener(ev, showWelcomeVideo, { once: true }));
+            setTimeout(showWelcomeVideo, 6000);
+        }
     } else {
         welcomeVideo.pause();
         welcomeVideo.removeAttribute('src');
@@ -417,7 +416,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     function startTour() {
         clearTimeout(tourTimer);
         if (tourOpen) return;
-        if (!welcome.hidden || menuIsOpen() || calOpen || !supportPanel.hidden || !privacyPanel.hidden || appRoot.classList.contains('is-searching')) {
+        if (!welcome.hidden || menuIsOpen() || calOpen || !privacyPanel.hidden || appRoot.classList.contains('is-searching')) {
             tourQueued = false;
             consentWelcomeClosed();
             return;
@@ -433,7 +432,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         requestAnimationFrame(() => { tourCard.classList.add('show'); tourRing.classList.add('show'); });
         clearInterval(tourPoll);
         tourPoll = setInterval(() => {
-            if (appRoot.classList.contains('is-searching') || menuIsOpen() || calOpen || !welcome.hidden || !supportPanel.hidden || !privacyPanel.hidden) { endTour(false); return; }
+            if (appRoot.classList.contains('is-searching') || menuIsOpen() || calOpen || !welcome.hidden || !privacyPanel.hidden) { endTour(false); return; }
             tourPlace(false);
         }, 400);
     }
@@ -1094,6 +1093,15 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     arrowsEl.addEventListener('touchstart', e => { const h = chevronHit(e); if (h) setRay(h.dataset.kind, 'chevron'); }, { passive: true });
     ['touchend', 'touchcancel'].forEach(t => arrowsEl.addEventListener(t, () => { if (raySource === 'chevron') setRay(null); }, { passive: true }));
 
+    let lastPointerType = '';
+    document.addEventListener('pointerdown', e => { lastPointerType = e.pointerType; }, true);
+    document.addEventListener('contextmenu', e => {
+        const t = e.target;
+        if (!t || !t.closest || t.closest('input, textarea, [contenteditable]')) return;
+        const touch = e.pointerType ? e.pointerType === 'touch' : lastPointerType === 'touch';
+        if (touch && t.closest('#map, .sun-arrows, .sun-rays, #dock, #tools')) e.preventDefault();
+    });
+
     function geoDestination(lat, lng, bearingDeg, distanceKm) {
         const R = 6378.1;
         const brng = bearingDeg * (Math.PI / 180);
@@ -1209,7 +1217,6 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     function openToolsMenu(focus) {
         if (!menuIsOpen()) {
             closeCal(false);
-            if (!supportPanel.hidden) setSupportPanel(false, false);
             if (!privacyPanel.hidden) setPrivacyPanel(false, false);
             toolsMenu.hidden = false;
             toolsBtn.setAttribute('aria-expanded', 'true');
@@ -1512,27 +1519,8 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     });
 
     const supportPrompt = el('supportPrompt');
-    const supportPanel = el('supportPanel');
     const DAY_MS = 86400000;
     const SUPPORT_FORCED = params.get('support') === '1';
-
-    const donateUrl = n => 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=' + SUPPORT.PAYPAL_MERCHANT_ID + '&amount=' + n + '&currency_code=' + SUPPORT.CURRENCY + '&item_name=Golden+Hour+Map+support&no_shipping=1';
-    document.querySelectorAll('[data-amounts]').forEach(box => {
-        SUPPORT.AMOUNTS.forEach(n => {
-            const link = document.createElement('a');
-            link.className = 'amt';
-            link.href = donateUrl(n);
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = SUPPORT.SYMBOL + n;
-            link.setAttribute('aria-label', 'Donate ' + SUPPORT.SYMBOL + n + ' with PayPal (opens in a new tab)');
-            box.appendChild(link);
-        });
-    });
-    document.querySelectorAll('[data-donate-other]').forEach(link => {
-        link.href = 'https://www.paypal.com/donate/?hosted_button_id=' + SUPPORT.PAYPAL_HOSTED_BUTTON_ID;
-    });
-
     const dNow = new Date();
     const dayKey = dNow.getFullYear() + '-' + (dNow.getMonth() + 1) + '-' + dNow.getDate();
     let sState = null;
@@ -1564,7 +1552,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         return sState.sessions >= 2 && sActions >= SUPPORT.MIN_ACTIONS;
     }
     function supportOverlayOpen() {
-        return tourOpen || !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !supportPanel.hidden || !privacyPanel.hidden || appRoot.classList.contains('is-searching');
+        return tourOpen || !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !privacyPanel.hidden || appRoot.classList.contains('is-searching');
     }
     function supportCollides() {
         const r = supportPrompt.getBoundingClientRect();
@@ -1626,36 +1614,21 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     el('spLater').addEventListener('click', () => supportHide(SUPPORT.COOLDOWN_DISMISSED_DAYS, false));
     supportPrompt.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); supportHide(SUPPORT.COOLDOWN_DISMISSED_DAYS, true); } });
-    supportPrompt.addEventListener('click', e => {
-        if (!e.target.closest('.amt')) return;
+    el('spSupport').addEventListener('click', () => {
         supportHide(SUPPORT.COOLDOWN_DONATED_DAYS, false);
         showToast('Thank you for supporting Golden Hour Map');
     });
-
-    function setSupportPanel(open, returnFocus) {
-        supportPanel.hidden = !open;
-        if (open) {
-            if (!privacyPanel.hidden) setPrivacyPanel(false, false);
-            if (!supportPrompt.hidden) supportHide(0, false);
-            el('supportClose').focus({ preventScroll: true });
-        } else if (returnFocus) toolsBtn.focus({ preventScroll: true });
-    }
-    el('supportBtn').addEventListener('click', () => setSupportPanel(true, false));
-    el('supportClose').addEventListener('click', () => setSupportPanel(false, true));
-    supportPanel.addEventListener('click', e => {
-        if (!e.target.closest('.amt, .sp-other')) return;
+    const supportLink = el('supportBtn');
+    supportLink.addEventListener('click', () => {
+        if (!supportPrompt.hidden) supportHide(0, false);
         sSnooze(SUPPORT.COOLDOWN_DONATED_DAYS);
         showToast('Thank you for supporting Golden Hour Map');
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !supportPanel.hidden) { e.preventDefault(); setSupportPanel(false, true); } });
-    document.addEventListener('pointerdown', e => { if (!supportPanel.hidden && !supportPanel.contains(e.target) && !toolsBtn.contains(e.target)) setSupportPanel(false, false); });
-    map.on('dragstart', () => { if (!supportPanel.hidden) setSupportPanel(false, false); });
-
+    supportLink.addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); supportLink.click(); } });
     const privacyPanel = el('privacyPanel');
     function setPrivacyPanel(open, returnFocus) {
         privacyPanel.hidden = !open;
         if (open) {
-            if (!supportPanel.hidden) setSupportPanel(false, false);
             refreshConsentUI();
             el('privacyClose').focus({ preventScroll: true });
         } else if (returnFocus) toolsBtn.focus({ preventScroll: true });

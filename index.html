@@ -164,21 +164,10 @@
         <button id="zoomOut" class="menu-item menu-zoom" type="button" role="menuitem" tabindex="-1" data-keep="1"><svg class="ic" aria-hidden="true"><use href="#i-minus" /></svg><span>Zoom out</span></button>
         <div class="menu-sep" role="separator"></div>
         <button id="shareBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-share" /></svg><span>Copy share link</span></button>
-        <button id="supportBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-heart" /></svg><span>Support</span></button>
+        <a id="supportBtn" class="menu-item" href="https://buymeacoffee.com/sblk" target="_blank" rel="noopener noreferrer" role="menuitem" tabindex="-1" aria-label="Support me (opens Buy Me a Coffee in a new tab)"><svg class="ic" aria-hidden="true"><use href="#i-heart" /></svg><span>Support me</span></a>
         <button id="privacyBtn" class="menu-item" type="button" role="menuitem" tabindex="-1" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-shield" /></svg><span>Privacy &amp; cookies</span></button>
         <button id="tipsBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-pan" /></svg><span>Show tips again</span></button>
         <button id="infoBtn" class="menu-item" type="button" role="menuitem" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-info" /></svg><span>About</span></button>
-      </div>
-      <div id="supportPanel" class="support-panel glass" role="dialog" aria-labelledby="spnTitle" hidden>
-        <div class="sp-head">
-          <svg class="sp-heart" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-heart" /></svg>
-          <h2 id="spnTitle">Support Golden Hour Map</h2>
-          <button id="supportClose" class="sp-close" type="button" aria-label="Close" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
-        </div>
-        <p class="sp-text">Golden Hour Map is free, with no ads, built and run by one person. A small donation keeps it online and improving.</p>
-        <div class="amounts" data-amounts></div>
-        <a class="sp-other" data-donate-other href="https://www.paypal.com/donate/?hosted_button_id=MJCKZBKJ9GJD6" target="_blank" rel="noopener noreferrer" aria-label="Other amount with PayPal (opens in a new tab)">Other amount</a>
-        <p class="sp-note">Donations go through PayPal and open in a new tab. Thank you.</p>
       </div>
       <div id="privacyPanel" class="support-panel privacy-panel glass" role="dialog" aria-labelledby="prvTitle" hidden>
         <div class="sp-head">
@@ -200,9 +189,9 @@
         <svg class="sp-heart" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-heart" /></svg>
         <h2 id="spTitle">Enjoying Golden Hour Map?</h2>
       </div>
-      <p class="sp-text">It's free, no ads, built by one person. A small donation keeps it online.</p>
+      <p class="sp-text">Golden Hour Map is free, with no ads, built and run by one person. A small donation keeps it online and improving.</p>
       <div class="sp-row">
-        <div class="amounts" data-amounts></div>
+        <a id="spSupport" class="btn btn-primary btn-sm" href="https://buymeacoffee.com/sblk" target="_blank" rel="noopener noreferrer" aria-label="Support me (opens Buy Me a Coffee in a new tab)">Support me</a>
         <button id="spLater" class="sp-later" type="button">Not now</button>
       </div>
     </aside>
@@ -316,7 +305,7 @@
         <div class="welcome-actions">
           <button id="startButton" class="btn btn-primary" type="button">Get started</button>
         </div>
-        <p class="welcome-links"><a href="/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="welcome-ver">v4.1.1 <span aria-hidden="true">&#10024;</span></span></p>
+        <p class="welcome-links"><a href="/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="welcome-ver">v4.1.2 <span aria-hidden="true">&#10024;</span></span></p>
       </div>
     </div>
   </div>
