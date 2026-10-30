@@ -68,7 +68,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
 <link rel="dns-prefetch" href="https://server.arcgisonline.com">
-<link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/calsans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" />
   <link rel="stylesheet" href="Control.OSMGeocoder.css" />
   <link rel="stylesheet" href="base.css" />
@@ -258,7 +258,6 @@
             <button id="cal" class="datepill-btn" type="button" aria-label="Choose date" title="Choose date" aria-haspopup="dialog" aria-expanded="false" aria-controls="calendar">
               <svg class="ic ic-sm" aria-hidden="true"><use href="#i-cal" /></svg>
               <span id="dateLabel">&nbsp;</span>
-              <span id="todayBadge" class="badge" hidden>Today</span>
             </button>
           </div>
           <button id="next-day" class="step" type="button" aria-label="Next day" title="Next day">
@@ -307,12 +306,13 @@
       </div>
       <div class="welcome-noise" aria-hidden="true"></div>
       <div class="welcome-body">
+        <p class="welcome-ver">v4.1.4 <span aria-hidden="true">&#10024;</span></p>
         <h2 id="welcomeTitle">Golden Hour Map</h2>
         <p class="welcome-desc">Find the golden hour for any location, free with no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
-        <div class="welcome-actions">
-          <button id="startButton" class="btn btn-primary" type="button">Get started</button>
-        </div>
-        <p class="welcome-links"><a href="/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="welcome-ver">v4.1.3 <span aria-hidden="true">&#10024;</span></span></p>
+      </div>
+      <div class="welcome-foot">
+        <a class="welcome-privacy" href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <button id="startButton" class="welcome-go" type="button" aria-label="Get started" title="Get started"><svg class="ic" aria-hidden="true"><use href="#i-chev-r" /></svg></button>
       </div>
     </div>
   </div>

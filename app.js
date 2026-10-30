@@ -787,8 +787,9 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     function updateDateLabel() {
         const label = formatDateLabel(date);
         el('dateLabel').textContent = label;
-        el('todayBadge').hidden = !isToday(date);
-        calBtn.setAttribute('aria-label', `Choose date. Selected: ${date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`);
+        const tod = isToday(date);
+        if (tod) calBtn.setAttribute('aria-current', 'date'); else calBtn.removeAttribute('aria-current');
+        calBtn.setAttribute('aria-label', `Choose date. Selected: ${date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${tod ? ', today' : ''}`);
     }
 
     function refresh() {
@@ -950,6 +951,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         refs.miniPm.classList.toggle('is-now', s.now === 'pm');
         refs.nowAm.hidden = s.now !== 'am';
         refs.nowPm.hidden = s.now !== 'pm';
+        document.querySelector('.map-centre')?.classList.toggle('is-golden', s.now !== null);
         placeNowDot(s.frac);
     }
     setInterval(updateNow, 15000);
