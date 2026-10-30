@@ -14,7 +14,7 @@
 }
 :root {
   color-scheme: light dark;
-  --word-gap: -0.3em;
+  --word-gap: -0.05em;
   --font: "Cal Sans", "Outfit", system-ui, -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   --font-display: "Cal Sans", var(--font);
