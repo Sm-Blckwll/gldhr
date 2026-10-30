@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="preload" href="/fonts/calsans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/notosans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>    :root {
       --bg: #eef1f5; --card: rgb(255 255 255 / 0.72); --edge: rgb(13 18 32 / 0.1);
       --text: #0d1220; --text-2: #242b3f; --text-3: #3b445a; --amber: #f5a00b; --amber-text: #8a4e00; --on-amber: #2a1700; --focus: #0b63ce;
@@ -24,28 +24,27 @@
       :root { --bg: #12151d; --card: rgb(32 37 50 / 0.72); --edge: rgb(255 255 255 / 0.12); --text: #f6f8fc; --text-2: #e6eaf3; --text-3: #c9d0df; --amber-text: #ffc45c; --focus: #8cc2ff; }
     }
     * { box-sizing: border-box; }
-    @font-face { font-family: "Cal Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/calsans-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-    @font-face { font-family: "Cal Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/calsans-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: "Noto Sans"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/notosans-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: "Noto Sans"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/notosans-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
     @font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/outfit-latin-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
     @font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/fonts/outfit-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
     html { -webkit-text-size-adjust: 100%; }
-    :where(h1, h2, h3, p, li, a, th, td, button) { word-spacing: -0.05em; }
+    :where(h1, h2, h3, p, li, a, th, td, button) { word-spacing: normal; }
     body {
       margin: 0; min-height: 100vh; color: var(--text); background: var(--bg);
       background-image: radial-gradient(ellipse 80% 40% at 10% 0%, rgb(150 205 255 / 0.28), transparent 70%), radial-gradient(ellipse 70% 40% at 100% 100%, rgb(255 196 95 / 0.25), transparent 70%);
       background-attachment: fixed;
-      font: 16px/1.6 "Cal Sans", "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-synthesis: none;
-      word-spacing: -0.05em;
+      font: 16px/1.6 "Noto Sans", "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      word-spacing: normal;
       font-variant-numeric: tabular-nums;
       padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     }
     main { max-width: 680px; margin: 0 auto; padding: 28px 24px 32px; background: var(--card); border: 1px solid var(--edge); border-radius: 28px; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
     @media (prefers-reduced-transparency: reduce) { main { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
-    .back { display: inline-block; margin-bottom: 18px; font-weight: 400; font-size: 15px; color: var(--amber-text); text-decoration: none; border-radius: 6px; }
+    .back { display: inline-block; margin-bottom: 18px; font-weight: 700; font-size: 15px; color: var(--amber-text); text-decoration: none; border-radius: 6px; }
     .back:hover { text-decoration: underline; }
-    h1 { margin: 0; font-size: 32px; line-height: 1.1; font-weight: 400; letter-spacing: 0; }
-    h2 { margin: 28px 0 6px; font-size: 18px; line-height: 1.3; font-weight: 400; letter-spacing: 0; }
+    h1 { margin: 0; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: 0; }
+    h2 { margin: 28px 0 6px; font-size: 18px; line-height: 1.3; font-weight: 700; letter-spacing: 0; }
     p, li { color: var(--text-2); }
     p { margin: 8px 0; }
     ul { margin: 8px 0; padding-left: 22px; }
@@ -57,7 +56,7 @@
     code { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 1px 5px; border-radius: 6px; background: var(--edge); }
     table { width: 100%; margin: 10px 0; border-collapse: collapse; font-size: 14.5px; }
     th, td { padding: 8px 10px 8px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--edge); color: var(--text-2); }
-    th { color: var(--text); font-weight: 400; }
+    th { color: var(--text); font-weight: 700; }
     .wrap { overflow-x: auto; }
     @media (max-width: 480px) { main { padding: 22px 18px 26px; border-radius: 24px; } h1 { font-size: 28px; } }
 </style>

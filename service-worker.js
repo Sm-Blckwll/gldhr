@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-GHM-v4.1.5";
+const CACHE = "pwabuilder-GHM-v4.1.6";
 const ASSET_CACHE = CACHE + "-assets";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
@@ -24,8 +24,9 @@ const PRECACHE_OWN = [
 const PRECACHE_FONTS = [
   "/fonts/outfit-latin.woff2",
   "/fonts/outfit-latin-ext.woff2",
-  "/fonts/calsans-latin.woff2",
-  "/fonts/calsans-latin-ext.woff2"
+  "/fonts/notosans-latin.woff2",
+  "/fonts/notosans-latin-ext.woff2",
+  "/fonts/NotoSans-OFL.txt"
 ];
 
 const PRECACHE_CDN = [
