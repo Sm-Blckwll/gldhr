@@ -61,6 +61,110 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         ...TILE_LOADING
     }).addTo(map);
 
+    const NIGHT = {
+        W: 720, H: 360,
+        SHADE_FROM: 0,
+        SHADE_FULL: -12,
+        GOLD_LOW: -1,
+        GOLD_PEAK: 2,
+        GOLD_TOP: 12,
+        ZOOM_FADE_FROM: 7,
+        ZOOM_FADE_TO: 10,
+        EVERY_MS: 60000
+    };
+    const MERC_MAX = 85.0511287798;
+    map.createPane('night');
+    const nightPane = map.getPane('night');
+    nightPane.style.zIndex = 225;
+    nightPane.style.pointerEvents = 'none';
+    nightPane.style.opacity = '0';
+    const nightCanvas = document.createElement('canvas');
+    nightCanvas.width = NIGHT.W; nightCanvas.height = NIGHT.H;
+    const nightCtx = nightCanvas.getContext('2d');
+    const nightImg = nightCtx.createImageData(NIGHT.W, NIGHT.H);
+    const nightRows = Array.from({ length: NIGHT.H }, (_, j) => {
+        const yMax = Math.log(Math.tan(Math.PI / 4 + MERC_MAX * Math.PI / 360));
+        const lat = 2 * Math.atan(Math.exp(yMax - (j + 0.5) * 2 * yMax / NIGHT.H)) - Math.PI / 2;
+        return { s: Math.sin(lat), c: Math.cos(lat) };
+    });
+    const nightCopies = new Map();
+    let nightUrl = '', nightOn = false, nightTimer = null;
+    const smoothStep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+    function subsolarPoint(ms) {
+        const rad = Math.PI / 180, d = ms / 86400000 - 10957.5;
+        const M = rad * (357.5291 + 0.98560028 * d);
+        const L = M + rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M) + 282.9372);
+        const e = rad * 23.4397;
+        const dec = Math.asin(Math.sin(e) * Math.sin(L));
+        const ra = Math.atan2(Math.sin(L) * Math.cos(e), Math.cos(L));
+        const gst = rad * (280.16 + 360.9856235 * d);
+        return { dec, lng: ra - gst };
+    }
+
+    function drawNight() {
+        const cs = getComputedStyle(document.documentElement);
+        const shade = parseFloat(cs.getPropertyValue('--night-shade')) || 0.45;
+        const gold = parseFloat(cs.getPropertyValue('--night-gold')) || 0.3;
+        const [nr, ng, nb] = cs.getPropertyValue('--night-rgb').trim().split(/\s+/).map(Number);
+        const [ar, ag, ab] = cs.getPropertyValue('--amber-rgb').trim().split(/\s+/).map(Number);
+        const sun = subsolarPoint(Date.now());
+        const sd = Math.sin(sun.dec), cd = Math.cos(sun.dec), px = nightImg.data, W = NIGHT.W, deg = 180 / Math.PI;
+        const cosH = new Float32Array(W);
+        for (let i = 0; i < W; i++) cosH[i] = Math.cos((-180 + (i + 0.5) * 360 / W) / deg - sun.lng);
+        let k = 0;
+        for (const row of nightRows) {
+            const a = row.s * sd, b = row.c * cd;
+            for (let i = 0; i < W; i++, k += 4) {
+                const h = Math.asin(Math.max(-1, Math.min(1, a + b * cosH[i]))) * deg;
+                const sA = shade * smoothStep(NIGHT.SHADE_FROM, NIGHT.SHADE_FULL, h);
+                const gA = gold * smoothStep(NIGHT.GOLD_LOW, NIGHT.GOLD_PEAK, h) * (1 - smoothStep(NIGHT.GOLD_PEAK, NIGHT.GOLD_TOP, h));
+                const al = sA + gA;
+                if (al < 0.004) { px[k + 3] = 0; continue; }
+                px[k] = (nr * sA + ar * gA) / al; px[k + 1] = (ng * sA + ag * gA) / al; px[k + 2] = (nb * sA + ab * gA) / al;
+                px[k + 3] = Math.min(1, al) * 255;
+            }
+        }
+        nightCtx.putImageData(nightImg, 0, 0);
+        nightCanvas.toBlob(blob => {
+            if (!blob) return;
+            const old = nightUrl;
+            nightUrl = URL.createObjectURL(blob);
+            nightCopies.forEach(o => o.setUrl(nightUrl));
+            if (old) setTimeout(() => URL.revokeObjectURL(old), 5000);
+            syncNightCopies();
+            nightOpacity();
+        }, 'image/png');
+    }
+
+    function syncNightCopies() {
+        if (!nightUrl) return;
+        const b = map.getBounds(), k0 = Math.floor((b.getWest() + 180) / 360) - 1, k1 = Math.floor((b.getEast() + 180) / 360) + 1;
+        for (let k = k0; k <= k1; k++) {
+            if (!nightCopies.has(k)) nightCopies.set(k, L.imageOverlay(nightUrl, [[-MERC_MAX, -180 + 360 * k], [MERC_MAX, 180 + 360 * k]], { pane: 'night', interactive: false, className: 'night-img' }).addTo(map));
+        }
+        nightCopies.forEach((o, k) => { if (k < k0 - 2 || k > k1 + 2) { o.remove(); nightCopies.delete(k); } });
+    }
+
+    function nightOpacity() {
+        nightPane.style.opacity = nightOn && nightUrl ? String(1 - smoothStep(NIGHT.ZOOM_FADE_FROM, NIGHT.ZOOM_FADE_TO, map.getZoom())) : '0';
+    }
+
+    function setNightVisible(on) {
+        if (on === nightOn) return;
+        nightOn = on;
+        clearInterval(nightTimer); nightTimer = null;
+        if (on) {
+            drawNight();
+            nightTimer = setInterval(() => { if (!document.hidden) drawNight(); }, NIGHT.EVERY_MS);
+        }
+        nightOpacity();
+    }
+    map.on('zoomend', nightOpacity);
+    map.on('moveend', syncNightCopies);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && nightOn) drawNight(); });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (nightOn) drawNight(); });
+
     map.whenReady(() => {
         const conn = navigator.connection;
         if (conn && conn.saveData) return;
@@ -789,6 +893,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         el('dateLabel').textContent = label;
         const tod = isToday(date);
         if (tod) calBtn.setAttribute('aria-current', 'date'); else calBtn.removeAttribute('aria-current');
+        setNightVisible(tod);
         calBtn.setAttribute('aria-label', `Choose date. Selected: ${date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${tod ? ', today' : ''}`);
     }
 
@@ -951,7 +1056,9 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         refs.miniPm.classList.toggle('is-now', s.now === 'pm');
         refs.nowAm.hidden = s.now !== 'am';
         refs.nowPm.hidden = s.now !== 'pm';
+        document.querySelector('.map-centre')?.classList.toggle('is-day', s.now === null && s.frac !== null);
         document.querySelector('.map-centre')?.classList.toggle('is-golden', s.now !== null);
+        document.querySelector('.map-centre')?.classList.toggle('not-today', !isToday(date));
         placeNowDot(s.frac);
     }
     setInterval(updateNow, 15000);

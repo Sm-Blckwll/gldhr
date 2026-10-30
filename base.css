@@ -29,6 +29,9 @@
   --amber-rgb: 245 160 11;
   --amber-text: #8a4e00;
   --on-amber: #2a1700;
+  --night-shade: 0.62;
+  --night-rgb: 6 12 34;
+  --night-gold: 0.30;
   --glass-rgb: 255 255 255;
   --solid-rgb: 247 249 252;
   --sheen-rgb: 255 255 255;
@@ -76,6 +79,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --night-shade: 0.68;
+    --night-gold: 0.34;
     --text: #f6f8fc;
     --text-2: #e6eaf3;
     --text-3: #c9d0df;
@@ -599,11 +604,15 @@ a.menu-item { text-decoration: none; }
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .tour-card, .faq-card { background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .tour-card, .faq-card { background: var(--glass-solid); } }
+.leaflet-night-pane { pointer-events: none; transition: opacity 0.7s ease; }
+@media (prefers-reduced-motion: reduce) { .leaflet-night-pane { transition: none; } }
 .map-centre { position: fixed; z-index: 450; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
 .map-centre::before { content: ""; position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); }
 .map-centre-dot { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: #111; transition: background-color 0.4s; animation: map-centre-beat 1.6s ease-in-out infinite; }
+.map-centre.is-day .map-centre-dot { background: #a8d8f5; }
 .map-centre.is-golden .map-centre-dot { background: var(--amber); }
 @keyframes map-centre-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.82); } }
+.map-centre.not-today .map-centre-dot { animation: none; }
 @media (prefers-reduced-motion: reduce) { .map-centre-dot { animation: none; } }
 .welcome {
   position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center;
