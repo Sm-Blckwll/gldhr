@@ -1643,6 +1643,7 @@ void main() {
             down = null;
             if (d.drag || Math.hypot(e.clientX - d.x, e.clientY - d.y) >= 6) return;
             if (d.play && active()) previewPlay(); else togglePin(kind);
+            if (e.pointerType === 'touch' && rayKind === kind) setRay(null);
         });
         node.addEventListener('pointercancel', () => { down = null; });
         node.addEventListener('click', e => {
@@ -1666,7 +1667,7 @@ void main() {
         if (!node) return;
         node.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') setRay(kind); });
         node.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch' && rayKind === kind) setRay(null); });
-        node.addEventListener('focusin', () => setRay(kind));
+        node.addEventListener('focusin', () => { if (node.matches(':focus-visible')) setRay(kind); });
         node.addEventListener('focusout', () => { if (rayKind === kind) setRay(null); });
         node.addEventListener('touchstart', () => setRay(kind), { passive: true });
         ['touchend', 'touchcancel'].forEach(t => node.addEventListener(t, () => { if (rayKind === kind) setRay(null); }, { passive: true }));
@@ -1675,6 +1676,7 @@ void main() {
     bindRay(el('miniPm'), 'set');
     bindPin(el('miniAm'), 'rise');
     bindPin(el('miniPm'), 'set');
+    map.on('click', () => { if (preview && pinKind) togglePin(pinKind); });
     bindRay(document.querySelector('.arc-end-l'), 'rise');
     bindRay(document.querySelector('.arc-end-r'), 'set');
     const chevronHit = e => (e.target && e.target.closest) ? e.target.closest('.sun-chevron-hit') : null;
