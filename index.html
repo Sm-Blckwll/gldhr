@@ -153,6 +153,8 @@
     <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3.5M8 7.2l4-4 4 4M6 10.5H5.5A2 2 0 0 0 3.5 12.5v6a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H18" /></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
     <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 6.2v11.6l9.3-5.8z" /></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6.5v11M15 6.5v11" /></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.7v5.3c0 4.4-2.9 7.7-7 9.6-4.1-1.9-7-5.2-7-9.6V5.9l7-2.7z" /><path d="M9 12l2.2 2.2L15.2 10" /></symbol>
 <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8" /><path d="M12 11v5.2" /><circle cx="12" cy="7.8" r=".6" fill="currentColor" /></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" /><circle cx="18.5" cy="12" r="1.5" fill="currentColor" stroke="none" /></symbol>
@@ -266,18 +268,22 @@
 
       <div id="windows" class="minis">
         <article id="miniAm" class="mini mini-am" aria-label="Morning golden hour">
-          <span class="mini-ic"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sunrise" /></svg></span>
+          <span class="mini-fill" aria-hidden="true"></span>
+          <span class="mini-ic"><svg class="ic ic-sm ic-kind" aria-hidden="true"><use href="#i-sunrise" /></svg><svg class="ic ic-sm ic-play" aria-hidden="true"><use href="#i-play" /></svg><svg class="ic ic-sm ic-pause" aria-hidden="true"><use href="#i-pause" /></svg></span>
           <div class="mini-txt">
             <span class="mini-label">Morning<span id="nowAm" hidden> &middot; now</span></span>
             <span class="mini-time"><span id="amFrom">--:--</span><span class="dash">&ndash;</span><span id="amTo">--:--</span></span>
           </div>
+          <span class="mini-pv" aria-hidden="true"></span>
         </article>
         <article id="miniPm" class="mini mini-pm" aria-label="Evening golden hour">
-          <span class="mini-ic"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-sunset" /></svg></span>
+          <span class="mini-fill" aria-hidden="true"></span>
+          <span class="mini-ic"><svg class="ic ic-sm ic-kind" aria-hidden="true"><use href="#i-sunset" /></svg><svg class="ic ic-sm ic-play" aria-hidden="true"><use href="#i-play" /></svg><svg class="ic ic-sm ic-pause" aria-hidden="true"><use href="#i-pause" /></svg></span>
           <div class="mini-txt">
             <span class="mini-label">Evening<span id="nowPm" hidden> &middot; now</span></span>
             <span class="mini-time"><span id="pmFrom">--:--</span><span class="dash">&ndash;</span><span id="pmTo">--:--</span></span>
           </div>
+          <span class="mini-pv" aria-hidden="true"></span>
         </article>
       </div>
 
@@ -314,7 +320,7 @@
       <button id="attribToggle" class="attrib-link" type="button" aria-expanded="false" aria-controls="attribPop" aria-haspopup="dialog">Attribution</button>
       <div id="attribPop" class="attrib-pop glass" role="dialog" aria-label="Map credits" hidden>
         <div class="attrib-head"><h2>Map credits</h2><button id="attribClose" class="attrib-close" type="button" aria-label="Close credits" title="Close"><svg class="ic ic-xs" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
-        <p id="attribText" class="attrib-text">Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, and the GIS User Community. Search: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">Nominatim</a> &copy; OpenStreetMap contributors. Map by <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, location by <a href="https://github.com/rhlt/leaflet-geolet" target="_blank" rel="noopener">Geolet</a>. <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a>.</p>
+        <p id="attribText" class="attrib-text">Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, and the GIS User Community. Search: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">Nominatim</a> &copy; OpenStreetMap contributors. Map by <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, location by <a href="https://github.com/rhlt/leaflet-geolet" target="_blank" rel="noopener">Geolet</a>. Terrain &copy; <a href="https://mapterhorn.com/attribution" target="_blank" rel="noopener">Mapterhorn</a> (Copernicus GLO-30, Environment Agency and other open data). <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; cookies</a>.</p>
       </div>
     </div>
 
@@ -371,7 +377,7 @@
       </div>
       <div class="welcome-noise" aria-hidden="true"></div>
       <div class="welcome-body">
-        <p class="welcome-ver">v4.1.7 <span aria-hidden="true">&#10024;</span></p>
+        <p class="welcome-ver">v4.1.8 <span aria-hidden="true">&#10024;</span></p>
         <h2 id="welcomeTitle">Golden Hour Map</h2>
         <p class="welcome-desc">Find the golden hour for any location, free with no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
       </div>

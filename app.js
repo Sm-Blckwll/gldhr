@@ -163,7 +163,432 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     map.on('zoomend', nightOpacity);
     map.on('moveend', syncNightCopies);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && nightOn) drawNight(); });
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (nightOn) drawNight(); });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (nightOn) drawNight(); if (lg) { lg.colours = null; lightDraw(); } });
+
+    const LIGHT = {
+        URL: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp',
+        SRC_MAX: 16,
+        SRC_DROP: 2,
+        COARSE_DROP: 2,
+        COARSE_MAX: 12,
+        MAX_TILES: 16,
+        CACHE: 32,
+        MARGIN: 0.15,
+        RES: 0.5,
+        MIN_ZOOM: 7,
+        ZOOM_IN_FROM: 7, ZOOM_IN_TO: 9, ZOOM_OUT_FROM: 17, ZOOM_OUT_TO: 18.5,
+        EXAGGERATION: 2.5,
+        NORMAL_TEXELS: 1.5,
+        GAIN: 3.5,
+        LIGHT_GAIN: 2,
+        LIGHT_FULL_DEG: 20,
+        LIGHT_NONE_DEG: 45,
+        WATER_M: 1,
+        SHORE_M: 3,
+        CAST_STEPS: 32,
+        CAST_PX: 360,
+        CAST_SHADE: 0.75,
+        PENUMBRA_DEG: 1.5,
+        DUSK_FROM: 4,
+        DUSK_FULL: 0,
+        PLAY_MS: 4000
+    };
+    map.createPane('terrain');
+    const terrainPane = map.getPane('terrain');
+    terrainPane.style.zIndex = 212;
+    terrainPane.style.pointerEvents = 'none';
+    terrainPane.style.opacity = '0';
+    const pvCards = { rise: el('miniAm'), set: el('miniPm') };
+    let preview = null;
+    let lg = null;
+    let lgFrame = 0, lgPlay = null;
+    const lgTiles = new Map();
+    const lgLoading = new Map();
+    const lgMissing = new Set();
+
+    function previewWindow(kind) {
+        if (!sunInfo || sunInfo.state !== 'normal') return null;
+        const start = kind === 'rise' ? sunInfo.sunrise.getTime() : sunInfo.sunset.getTime() - 3600000;
+        return { start, end: start + 3600000 };
+    }
+    function previewTime() {
+        const w = preview && previewWindow(preview.kind);
+        return w ? w.start + preview.f * (w.end - w.start) : null;
+    }
+
+    const LG_VS = `#version 300 es
+in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }`;
+    const LG_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uFine, uCoarse;
+uniform vec2 uFineA, uCoarseA;       // texture uv at the canvas top left
+uniform vec2 uFineB, uCoarseB;       // texture uv per screen pixel
+uniform float uFineTx, uCoarseTx;    // screen pixels per texel
+uniform float uScale, uH;            // screen pixels per canvas pixel; canvas height
+uniform float uY0, uYB;              // Mercator y (0..1) at the canvas top, per screen pixel
+uniform float uMPx;                  // metres per screen pixel at the equator
+uniform vec3 uSun;                   // east, north, up
+uniform float uMax, uEx, uGain, uLGain, uLFull, uLNone, uWater, uShore, uCastPx, uCastShade, uPen, uDusk;
+uniform vec4 uShade, uLight;         // rgb + strength
+const int STEPS = ${LIGHT.CAST_STEPS};
+float elev(vec2 p, out float v) {
+    vec3 f = texture(uFine, uFineA + p * uFineB).rgb;
+    vec3 c = texture(uCoarse, uCoarseA + p * uCoarseB).rgb;
+    float ef = f.z > 0.0 ? (f.x + f.y) / f.z : 0.0;
+    float ec = c.z > 0.0 ? (c.x + c.y) / c.z : 0.0;
+    v = clamp(f.z, 0.0, 1.0);
+    return mix(ec, ef, v);
+}
+float elev(vec2 p) { float v; return elev(p, v); }
+out vec4 o;
+void main() {
+    vec2 p = vec2(gl_FragCoord.x, uH - gl_FragCoord.y) * uScale;
+    float v;
+    float e0 = elev(p, v);
+    float land = smoothstep(uWater, uWater + uShore, e0);
+    float dusk = uDusk * uCastShade * uShade.a;   // the shade over everything, water too, as the sun sets
+    if (land <= 0.0 || uDusk >= 1.0) { o = vec4(uShade.rgb * dusk, dusk); return; }
+    float t = 3.14159265 * (1.0 - 2.0 * (uY0 + p.y * uYB));
+    float mpx = uMPx / cosh(t);
+    float h = max(mix(uCoarseTx, uFineTx, v), 0.5);
+    float dx = (elev(p + vec2(h, 0.0)) - elev(p - vec2(h, 0.0))) / (2.0 * h * mpx);
+    float dy = (elev(p - vec2(0.0, h)) - elev(p + vec2(0.0, h))) / (2.0 * h * mpx);
+    vec3 n = normalize(vec3(-dx * uEx, -dy * uEx, 1.0));
+    float raw = dot(n, uSun) - uSun.z;
+    float shade = clamp(-raw * uGain, 0.0, 1.0);
+    float light = clamp(raw * uLGain, 0.0, 1.0) * smoothstep(uLNone, uLFull, n.z);
+    float hz = length(uSun.xy);
+    if (hz > 0.001 && uCastPx > 0.0) {
+        vec2 d = vec2(uSun.x, -uSun.y) / hz;
+        float tanA = uSun.z / hz / uEx, sh = 0.0;
+        for (int i = 1; i <= STEPS; i++) {
+            float s = float(i) / float(STEPS);
+            float dist = s * s * uCastPx + uScale;
+            float ray = e0 + dist * mpx * tanA;
+            if (ray > uMax) break;
+            float rise = elev(p + d * dist) - ray;
+            if (rise > 0.0) sh = max(sh, rise * uEx / (dist * mpx) / uPen);
+            if (sh >= 1.0) break;
+        }
+        sh = clamp(sh, 0.0, 1.0) * uCastShade;
+        shade = max(shade, sh);
+        light *= 1.0 - sh;
+    }
+    float a = max(shade * uShade.a * land, dusk), b = light * uLight.a * land * (1.0 - uDusk) * (1.0 - a);
+    o = vec4(uShade.rgb * a + uLight.rgb * b, a + b);
+}`;
+
+    function lightGL() {
+        if (lg !== null) return lg;
+        lg = false;
+        const canvas = L.DomUtil.create('canvas', 'light-canvas leaflet-zoom-animated', terrainPane);
+        const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false });
+        if (!gl) { canvas.remove(); return lg; }
+        const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+        const prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, LG_VS));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, LG_FS));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { canvas.remove(); return lg; }
+        gl.useProgram(prog);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        const u = {};
+        for (let i = 0, n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS); i < n; i++) {
+            const name = gl.getActiveUniform(prog, i).name;
+            u[name] = gl.getUniformLocation(prog, name);
+        }
+        gl.uniform1i(u.uFine, 0);
+        gl.uniform1i(u.uCoarse, 1);
+        gl.clearColor(0, 0, 0, 0);
+        canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); lg = false; if (pinKind) togglePin(pinKind); });
+        const scratch = document.createElement('canvas');
+        scratch.width = scratch.height = 512;
+        lg = { canvas, gl, u, fine: null, coarse: null, view: null, colours: null, maxSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+            ctx: scratch.getContext('2d', { willReadFrequently: true }), rgb: new Float32Array(512 * 512 * 3) };
+        return lg;
+    }
+
+    function lightColours() {
+        const cs = getComputedStyle(document.documentElement);
+        const rgb = name => cs.getPropertyValue(name).trim().split(/\s+/).map(c => Number(c) / 255);
+        return { shade: [...rgb('--night-rgb'), parseFloat(cs.getPropertyValue('--terrain-shade')) || 0.8],
+            light: [...rgb('--amber-rgb'), parseFloat(cs.getPropertyValue('--terrain-light')) || 0.4] };
+    }
+
+    function lightTile(z, x, y) {
+        const key = `${z}/${x}/${y}`;
+        const hit = lgTiles.get(key);
+        if (hit) { lgTiles.delete(key); lgTiles.set(key, hit); return Promise.resolve(hit); }
+        for (let k = 1; k <= z; k++) if (lgMissing.has(`${z - k}/${x >> k}/${y >> k}`)) return Promise.resolve(null);
+        if (lgMissing.has(key)) return Promise.resolve(null);
+        if (lgLoading.has(key)) return lgLoading.get(key);
+        const url = LIGHT.URL.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+        const job = fetch(url).then(r => {
+            if (!r.ok) { if (r.status === 404) lgMissing.add(key); return null; }
+            return r.blob().then(b => createImageBitmap(b, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })).then(img => {
+                const ctx = lg.ctx;
+                ctx.clearRect(0, 0, 512, 512);
+                ctx.drawImage(img, 0, 0, 512, 512);
+                img.close?.();
+                const d = ctx.getImageData(0, 0, 512, 512).data, e = new Float32Array(512 * 512);
+                let max = -1e9;
+                for (let i = 0, j = 0; i < e.length; i++, j += 4) {
+                    const m = d[j] * 256 + d[j + 1] + d[j + 2] / 256 - 32768;
+                    e[i] = m;
+                    if (m > max) max = m;
+                }
+                const t = { e, max };
+                lgTiles.set(key, t);
+                while (lgTiles.size > LIGHT.CACHE) lgTiles.delete(lgTiles.keys().next().value);
+                return t;
+            });
+        }).catch(() => null).finally(() => lgLoading.delete(key));
+        lgLoading.set(key, job);
+        return job;
+    }
+
+    function lightGrid(z, view) {
+        const f = Math.pow(2, z - view.zoom) / 256;
+        const x0 = Math.floor(view.px * f), x1 = Math.floor((view.px + view.w - 1e-6) * f);
+        const n = Math.pow(2, z);
+        const y0 = Math.max(0, Math.floor(view.py * f)), y1 = Math.min(n - 1, Math.floor((view.py + view.h - 1e-6) * f));
+        const cols = x1 - x0 + 1, rows = Math.max(1, y1 - y0 + 1);
+        return { z, x0, y0, cols, rows, n, f };
+    }
+    function sameGrid(a, b) { return a && b && a.z === b.z && a.x0 === b.x0 && a.y0 === b.y0 && a.cols === b.cols && a.rows === b.rows; }
+
+    function lightLevel(old, grid, unit) {
+        if (old && sameGrid(old.grid, grid)) return old;
+        const gl = lg.gl;
+        if (old) gl.deleteTexture(old.tex);
+        const tex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB16F, grid.cols * 512, grid.rows * 512, 0, gl.RGB, gl.HALF_FLOAT, null);
+        return { grid, tex, unit, max: -1e9 };
+    }
+
+    function lightUpload(level, col, row, t) {
+        const gl = lg.gl, rgb = lg.rgb, e = t.e;
+        for (let i = 0, j = 0; i < e.length; i++, j += 3) {
+            const hi = Math.round(e[i] / 16) * 16;
+            rgb[j] = hi; rgb[j + 1] = e[i] - hi; rgb[j + 2] = 1;
+        }
+        gl.activeTexture(gl.TEXTURE0 + level.unit);
+        gl.bindTexture(gl.TEXTURE_2D, level.tex);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, col * 512, row * 512, 512, 512, gl.RGB, gl.FLOAT, rgb);
+        level.max = Math.max(level.max, t.max);
+    }
+
+    function lightFill(level) {
+        const g = level.grid, jobs = [];
+        const cx = (g.cols - 1) / 2, cy = (g.rows - 1) / 2;
+        for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) jobs.push([c, r, (c - cx) ** 2 + (r - cy) ** 2]);
+        jobs.sort((a, b) => a[2] - b[2]);
+        for (const [c, r] of jobs) {
+            const x = ((g.x0 + c) % g.n + g.n) % g.n, y = g.y0 + r;
+            lightTile(g.z, x, y).then(t => {
+                if (!t || !lg || (lg.fine !== level && lg.coarse !== level)) return;
+                lightUpload(level, c, r, t);
+                lightDraw();
+            });
+        }
+    }
+
+    function lightLayout() {
+        if (!preview || !lg) return;
+        const size = map.getSize(), z = map.getZoom();
+        const mx = Math.round(size.x * LIGHT.MARGIN), my = Math.round(size.y * LIGHT.MARGIN);
+        const w = size.x + 2 * mx, h = size.y + 2 * my;
+        const tl = map.getPixelBounds().min.subtract([mx, my]);
+        const view = { zoom: z, px: tl.x, py: tl.y, w, h, mx, my, nw: map.containerPointToLatLng([-mx, -my]) };
+        lg.view = view;
+        const c = lg.canvas, cw = Math.max(1, Math.round(w * LIGHT.RES)), ch = Math.max(1, Math.round(h * LIGHT.RES));
+        if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; }
+        c.style.width = w + 'px';
+        c.style.height = h + 'px';
+        L.DomUtil.setPosition(c, map.containerPointToLayerPoint([-mx, -my]));
+        if (z < LIGHT.MIN_ZOOM) { lightDraw(); return; }
+        const cap = Math.min(LIGHT.MAX_TILES, Math.floor(lg.maxSize / 512) ** 2);
+        const fit = g => g.cols * g.rows <= cap && g.cols * 512 <= lg.maxSize && g.rows * 512 <= lg.maxSize;
+        let fz = Math.max(0, Math.min(LIGHT.SRC_MAX, Math.round(z) - LIGHT.SRC_DROP)), fine = lightGrid(fz, view);
+        while (fz > 0 && !fit(fine)) fine = lightGrid(--fz, view);
+        const coarse = lightGrid(Math.max(0, Math.min(LIGHT.COARSE_MAX, fz - LIGHT.COARSE_DROP)), view);
+        const nc = lightLevel(lg.coarse, coarse, 1), nf = lightLevel(lg.fine, fine, 0);
+        const fresh = [nc !== lg.coarse && nc, nf !== lg.fine && nf];
+        lg.coarse = nc; lg.fine = nf;
+        fresh.forEach(l => { if (l) lightFill(l); });
+        lightDraw();
+    }
+
+    function lightOpacity() {
+        const z = map.getZoom();
+        const zoomF = smoothStep(LIGHT.ZOOM_IN_FROM, LIGHT.ZOOM_IN_TO, z) * (1 - smoothStep(LIGHT.ZOOM_OUT_FROM, LIGHT.ZOOM_OUT_TO, z));
+        terrainPane.style.opacity = preview && lg && previewWindow(preview.kind) ? String(zoomF) : '0';
+    }
+
+    function lightDraw() {
+        if (lgFrame || !lg) return;
+        lgFrame = requestAnimationFrame(() => {
+            lgFrame = 0;
+            if (!preview || !lg || !lg.view || !lg.fine) { if (lg) lg.gl.clear(lg.gl.COLOR_BUFFER_BIT); return; }
+            const { gl, u, view, fine, coarse, canvas } = lg;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            const t = previewTime(), c = map.getCenter();
+            if (t === null) return;
+            const sp = SunCalc.getPosition(new Date(t), c.lat, c.lng);
+            const az = sp.azimuth + Math.PI, alt = sp.altitude;
+            const dusk = 1 - smoothStep(LIGHT.DUSK_FULL, LIGHT.DUSK_FROM, alt * 180 / Math.PI);
+            const level = (L2, unit) => {
+                const g = L2.grid, tile = Math.pow(2, view.zoom - g.z) * 256;
+                gl.activeTexture(gl.TEXTURE0 + unit);
+                gl.bindTexture(gl.TEXTURE_2D, L2.tex);
+                return { a: [(view.px - g.x0 * tile) / (g.cols * tile), (view.py - g.y0 * tile) / (g.rows * tile)], b: 1 / (g.cols * tile), tx: tile / 512, by: 1 / (g.rows * tile) };
+            };
+            const f = level(fine, 0), k = level(coarse, 1);
+            gl.uniform2f(u.uFineA, f.a[0], f.a[1]);
+            gl.uniform2f(u.uCoarseA, k.a[0], k.a[1]);
+            gl.uniform2f(u.uFineB, f.b, f.by);
+            gl.uniform2f(u.uCoarseB, k.b, k.by);
+            gl.uniform1f(u.uFineTx, f.tx);
+            gl.uniform1f(u.uCoarseTx, k.tx);
+            gl.uniform1f(u.uScale, view.w / canvas.width);
+            gl.uniform1f(u.uH, canvas.height);
+            const world = 256 * Math.pow(2, view.zoom);
+            gl.uniform1f(u.uY0, view.py / world);
+            gl.uniform1f(u.uYB, 1 / world);
+            gl.uniform1f(u.uMPx, 40075016.686 / world);
+            gl.uniform3f(u.uSun, Math.sin(az) * Math.cos(alt), Math.cos(az) * Math.cos(alt), Math.sin(alt));
+            gl.uniform1f(u.uMax, Math.max(fine.max, coarse.max));
+            gl.uniform1f(u.uEx, LIGHT.EXAGGERATION);
+            gl.uniform1f(u.uGain, LIGHT.GAIN);
+            gl.uniform1f(u.uLGain, LIGHT.LIGHT_GAIN);
+            gl.uniform1f(u.uLFull, Math.cos(LIGHT.LIGHT_FULL_DEG * Math.PI / 180));
+            gl.uniform1f(u.uLNone, Math.cos(LIGHT.LIGHT_NONE_DEG * Math.PI / 180));
+            gl.uniform1f(u.uWater, LIGHT.WATER_M);
+            gl.uniform1f(u.uShore, LIGHT.SHORE_M);
+            gl.uniform1f(u.uCastPx, LIGHT.CAST_PX);
+            gl.uniform1f(u.uCastShade, LIGHT.CAST_SHADE);
+            gl.uniform1f(u.uPen, LIGHT.PENUMBRA_DEG * Math.PI / 180);
+            gl.uniform1f(u.uDusk, dusk);
+            const col = lg.colours || (lg.colours = lightColours());
+            gl.uniform4fv(u.uShade, col.shade);
+            gl.uniform4fv(u.uLight, col.light);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        });
+    }
+
+    map.on('zoomanim', e => {
+        if (!preview || !lg || !lg.view) return;
+        L.DomUtil.setTransform(lg.canvas, map._latLngToNewLayerPoint(lg.view.nw, e.zoom, e.center), map.getZoomScale(e.zoom));
+    });
+    map.on('moveend resize', () => { if (preview && lg) { lightLayout(); lightOpacity(); } });
+
+    function previewShow() {
+        const on = !!preview && !!previewWindow(preview.kind);
+        el('sunArrows').classList.toggle('is-preview', on);
+        placePreviewDot();
+        previewCard('rise', on && preview.kind === 'rise');
+        previewCard('set', on && preview.kind === 'set');
+        if (!on) return;
+        const card = pvCards[preview.kind], label = formatTime(new Date(previewTime()), sunInfo.timeZone);
+        card.style.setProperty('--f', preview.f.toFixed(4));
+        card.querySelector('.mini-pv').textContent = label;
+        card.setAttribute('aria-valuenow', String(Math.round(preview.f * 60)));
+        card.setAttribute('aria-valuetext', label);
+        previewRay();
+        lightDraw();
+    }
+
+    function previewCard(kind, on) {
+        const card = pvCards[kind], ic = card && card.querySelector('.mini-ic'), name = kind === 'rise' ? 'Morning' : 'Evening';
+        if (!ic || card.classList.contains('is-scrub') === on) return;
+        card.classList.toggle('is-scrub', on);
+        card.setAttribute('role', on ? 'slider' : 'button');
+        card.setAttribute('aria-label', on ? name + ' golden hour light preview' : name + ' golden hour');
+        if (on) {
+            card.setAttribute('aria-valuemin', '0');
+            card.setAttribute('aria-valuemax', '60');
+            ic.setAttribute('role', 'button');
+            ic.setAttribute('tabindex', '0');
+            ic.setAttribute('aria-label', 'Play the golden hour light');
+            ic.setAttribute('aria-pressed', 'false');
+        } else {
+            ['aria-valuemin', 'aria-valuemax', 'aria-valuenow', 'aria-valuetext'].forEach(n => card.removeAttribute(n));
+            ['role', 'tabindex', 'aria-label', 'aria-pressed'].forEach(n => ic.removeAttribute(n));
+        }
+    }
+
+    function previewSeek(f) {
+        if (!preview) return;
+        previewStop();
+        preview.f = Math.min(1, Math.max(0, f));
+        previewShow();
+    }
+
+    function previewRay() {
+        const t = previewTime();
+        if (!preview || t === null || pinKind !== preview.kind || rayBearings[preview.kind] === null) return;
+        const c = map.getCenter();
+        rayBearings[preview.kind] = bearingAt(new Date(t), c.lat, c.lng);
+        updateRayAngle();
+    }
+
+    function previewStop() {
+        if (!lgPlay) return;
+        cancelAnimationFrame(lgPlay.raf);
+        lgPlay = null;
+        document.querySelectorAll('.mini-ic[aria-pressed]').forEach(ic => { ic.setAttribute('aria-pressed', 'false'); ic.setAttribute('aria-label', 'Play the golden hour light'); });
+    }
+    function previewPlay() {
+        if (lgPlay) { previewStop(); return; }
+        if (!preview) return;
+        if (preview.f >= 1) preview.f = 0;
+        lgPlay = { from: preview.f, t0: performance.now(), raf: 0 };
+        const ic = pvCards[preview.kind].querySelector('.mini-ic');
+        ic.setAttribute('aria-pressed', 'true');
+        ic.setAttribute('aria-label', 'Pause');
+        const step = now => {
+            if (!lgPlay || !preview) return;
+            preview.f = Math.min(1, lgPlay.from + (now - lgPlay.t0) / LIGHT.PLAY_MS);
+            previewShow();
+            if (preview.f >= 1) previewStop();
+            else lgPlay.raf = requestAnimationFrame(step);
+        };
+        lgPlay.raf = requestAnimationFrame(step);
+    }
+
+    function setGoldenPreview(kind) {
+        previewStop();
+        if (!kind || !lightGL()) {
+            const was = !!preview;
+            preview = null;
+            previewShow();
+            lightOpacity();
+            if (was) { lightDraw(); renderSunArrows(map.getCenter()); }
+            return;
+        }
+        preview = { kind, f: 0 };
+        lg.colours = null;
+        previewShow();
+        lightLayout();
+        lightOpacity();
+    }
+
+    function syncGoldenPreview() {
+        if (!preview) return;
+        previewShow();
+        lightOpacity();
+        if (!previewWindow(preview.kind)) previewStop();
+    }
 
     map.whenReady(() => {
         const conn = navigator.connection;
@@ -351,8 +776,8 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     function refreshConsentUI() {
         if (!consentNeeded()) hideConsentBanner();
         el('prvStatus').textContent = browserSignal ? SIGNAL_TEXT
-            : consent === 'granted' ? 'Analytics cookies are on. Thank you, this helps improve the site.'
-            : consent === 'denied' ? 'Analytics cookies are off.'
+            : consent === 'granted' ? 'Analytics on. Thank you, this helps improve the site.'
+            : consent === 'denied' ? 'Analytics off.'
             : 'You haven\u2019t chosen yet. Nothing is collected unless you accept.';
         el('prvAllow').setAttribute('aria-pressed', String(consent === 'granted'));
         el('prvDeny').setAttribute('aria-pressed', String(consent === 'denied'));
@@ -422,9 +847,9 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         setTimeout(() => ripple.remove(), 600);
     });
     el('consentAccept').addEventListener('click', () => {
-        if (setConsent('granted')) showToast('Analytics cookies are on'); else showToast('Your browser blocks storage, so analytics stays off.');
+        if (setConsent('granted')) showToast('Analytics on'); else showToast('Your browser blocks storage, so analytics stays off.');
     });
-    el('consentDecline').addEventListener('click', () => { setConsent('denied'); showToast('Analytics cookies are off'); });
+    el('consentDecline').addEventListener('click', () => { setConsent('denied'); showToast('Analytics off'); });
     welcome.addEventListener('keydown', e => {
         if (e.key === 'Escape' && welcomeOpener) { closeWelcome(); return; }
         if (e.key === 'Tab') {
@@ -451,7 +876,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
           target: () => document.querySelector('.map-centre'), size: 22, radius: '50%', place: 'below' },
         { title: 'Search', text: 'Looking for somewhere specific? Search for a town, street or landmark and the map moves there.',
           target: () => el('searchToggle'), radius: '50%', place: 'below' },
-        { title: 'Golden hour times', text: 'Tap Morning or Evening to pin a guide line on the map. Hover the white arrows to line the sun up with the view.',
+        { title: 'Golden hour times', text: 'Tap Morning or Evening to pin the sun line and preview the light and shadows on the hills. Drag across the card to move through the hour, or press play. Tap again to close.',
           target: () => el('windows'), radius: '24px', place: 'above' },
         { title: 'Day and sun path', text: 'Change the day here, or open the arrow to see the sun path with sunrise and sunset.',
           target: () => document.querySelector('.dock-row'), radius: '24px', place: 'above' },
@@ -1012,6 +1437,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
         drawArc();
         updateNow();
+        syncGoldenPreview();
 
         if (signature !== lastSignature) {
             lastSignature = signature;
@@ -1065,7 +1491,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     document.addEventListener('visibilitychange', () => { if (!document.hidden) updateNow(); });
     const arcEl = el('arc');
     const ARC = { cx: 156, hy: 156, r: 150 };
-    let arcNow = null;
+    let arcNow = null, arcPv = null;
 
     function arcPt(f) {
         const a = f * Math.PI;
@@ -1102,11 +1528,23 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
             `<path class="arc-base" d="${arcPath(0, 1)}"/>` +
             `<g mask="url(#arcAbove)"><g filter="url(#arcBlur)"><path class="arc-glow" d="${am}"/><path class="arc-glow" d="${pm}"/></g></g>` +
             `<path class="arc-gold arc-gold-am" d="${am}"/><path class="arc-gold arc-gold-pm" d="${pm}"/>` +
-            '<g id="arcNow" style="display:none"><circle class="arc-now-halo" r="18"/><circle class="arc-now-dot" r="6.5"/></g>';
+            '<g id="arcNow" style="display:none"><circle class="arc-now-halo" r="18"/><circle class="arc-now-dot" r="6.5"/></g>' +
+            '<g id="arcPv" style="display:none"><circle class="arc-now-halo" r="18"/><circle class="arc-pv-dot" r="7"/></g>';
         arcNow = arcEl.querySelector('#arcNow');
+        arcPv = arcEl.querySelector('#arcPv');
+        placePreviewDot();
         arcEl.setAttribute('aria-label',
             `Sun path. Sunrise ${refs.sunriseTime.textContent}, morning golden hour ${sunInfo.amFrom} to ${sunInfo.amTo}, ` +
             `evening golden hour ${sunInfo.pmFrom} to ${sunInfo.pmTo}, sunset ${refs.sunsetTime.textContent}.`);
+    }
+    function placePreviewDot() {
+        if (!arcPv) return;
+        const t = preview ? previewTime() : null;
+        if (t === null || !sunInfo || sunInfo.state !== 'normal') { arcPv.style.display = 'none'; return; }
+        const sr = sunInfo.sunrise.getTime(), ss = sunInfo.sunset.getTime();
+        const p = arcPt(Math.min(1, Math.max(0, (t - sr) / (ss - sr))));
+        arcPv.setAttribute('transform', `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)})`);
+        arcPv.style.display = '';
     }
     function placeNowDot(f) {
         if (!arcNow) return;
@@ -1176,14 +1614,52 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         pinKind = (pinKind === kind) ? null : kind;
         [['rise', el('miniAm')], ['set', el('miniPm')]].forEach(p => p[1] && p[1].setAttribute('aria-pressed', String(pinKind === p[0])));
         showRay();
+        setGoldenPreview(pinKind);
     }
     function bindPin(node, kind) {
         if (!node) return;
         node.setAttribute('role', 'button');
         node.setAttribute('tabindex', '0');
         node.setAttribute('aria-pressed', 'false');
-        node.addEventListener('click', () => togglePin(kind));
-        node.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePin(kind); } });
+        let down = null;
+        const active = () => pinKind === kind && !!preview;
+        node.addEventListener('pointerdown', e => {
+            if (e.button) return;
+            down = { id: e.pointerId, x: e.clientX, y: e.clientY, drag: false, play: !!e.target.closest('.mini-ic') };
+        });
+        node.addEventListener('pointermove', e => {
+            if (!down || e.pointerId !== down.id) return;
+            if (!down.drag) {
+                if (!active() || Math.abs(e.clientX - down.x) < 6) return;
+                down.drag = true;
+                node.setPointerCapture?.(e.pointerId);
+            }
+            const r = node.getBoundingClientRect();
+            previewSeek((e.clientX - r.left) / r.width);
+        });
+        node.addEventListener('pointerup', e => {
+            if (!down || e.pointerId !== down.id) return;
+            const d = down;
+            down = null;
+            if (d.drag || Math.hypot(e.clientX - d.x, e.clientY - d.y) >= 6) return;
+            if (d.play && active()) previewPlay(); else togglePin(kind);
+        });
+        node.addEventListener('pointercancel', () => { down = null; });
+        node.addEventListener('click', e => {
+            if (e.detail !== 0) return;
+            if (active() && e.target.closest('.mini-ic')) previewPlay(); else togglePin(kind);
+        });
+        node.addEventListener('keydown', e => {
+            if (active() && preview.kind === kind) {
+                const step = (e.shiftKey ? 5 : 1) / 60;
+                const to = { ArrowLeft: preview.f - step, ArrowDown: preview.f - step, ArrowRight: preview.f + step, ArrowUp: preview.f + step, Home: 0, End: 1 }[e.key];
+                if (to !== undefined) { e.preventDefault(); previewSeek(to); return; }
+            }
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (active() && e.target.closest('.mini-ic')) previewPlay(); else togglePin(kind);
+            }
+        });
     }
 
     function bindRay(node, kind) {
@@ -1279,6 +1755,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
             arrowsEl.appendChild(holder);
         });
         buildRays(size);
+        previewRay();
         if (raySource === 'chevron' && !arrowsEl.querySelector('.sun-chevron-hit:hover')) setRay(null);
     }
     function drawSunArrows(center) {
@@ -1753,9 +2230,9 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     el('privacyBtn').addEventListener('click', () => setPrivacyPanel(true, false));
     el('privacyClose').addEventListener('click', () => setPrivacyPanel(false, true));
     el('prvAllow').addEventListener('click', () => {
-        if (setConsent('granted')) showToast('Analytics cookies are on'); else showToast('Your browser blocks storage, so analytics stays off.');
+        if (setConsent('granted')) showToast('Analytics on'); else showToast('Your browser blocks storage, so analytics stays off.');
     });
-    el('prvDeny').addEventListener('click', () => { setConsent('denied'); showToast('Analytics cookies are off'); });
+    el('prvDeny').addEventListener('click', () => { setConsent('denied'); showToast('Analytics off'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !privacyPanel.hidden) { e.preventDefault(); setPrivacyPanel(false, true); } });
     document.addEventListener('pointerdown', e => { if (!privacyPanel.hidden && !privacyPanel.contains(e.target) && !toolsBtn.contains(e.target)) setPrivacyPanel(false, false); });
     map.on('dragstart', () => { if (!privacyPanel.hidden) setPrivacyPanel(false, false); });
@@ -1790,8 +2267,12 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         return document.hidden || tourOpen || tourQueued || !welcome.hidden || calOpen || menuIsOpen() || attribIsOpen() || !privacyPanel.hidden || !faqPanel.hidden
             || !supportPrompt.hidden || !consentBanner.hidden || appRoot.classList.contains('is-searching') || mapEl.classList.contains('is-moving');
     }
+    function shareHintSeen() {
+        try { return sessionStorage.getItem('ghm-share-hint') === '1'; } catch (e) { return false; }
+    }
     function showShareHint() {
         clearTimeout(shareHintFade);
+        try { sessionStorage.setItem('ghm-share-hint', '1'); } catch (e) { }
         shareHintOn = true;
         shareHintShown++;
         shareHintAt = Date.now();
@@ -1813,7 +2294,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
             if (shareHintBlocked() || Date.now() - shareHintAt >= SHARE_HINT.SHOW_MS) hideShareHint();
             return;
         }
-        if (shareUsed || shareHintShown >= SHARE_HINT.MAX_SHOWS || shareHintBlocked()) { shareIdleSince = 0; return; }
+        if (shareUsed || shareHintShown >= SHARE_HINT.MAX_SHOWS || shareHintSeen() || shareHintBlocked()) { shareIdleSince = 0; return; }
         if (!shareIdleSince) { shareIdleSince = Date.now(); return; }
         if (Date.now() - shareIdleSince > SHARE_HINT.IDLE_MS && sharePosKey() !== shareHintKey) showShareHint();
     }, 500);
