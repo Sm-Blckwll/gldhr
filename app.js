@@ -558,6 +558,10 @@ void main() {
         if (!preview || !lg || !lg.view) return;
         L.DomUtil.setTransform(lg.canvas, map._latLngToNewLayerPoint(lg.view.nw, e.zoom, e.center), map.getZoomScale(e.zoom));
     });
+    map.on('zoom move', () => {
+        if (!preview || !lg || !lg.view || map._animatingZoom) return;
+        L.DomUtil.setTransform(lg.canvas, map.latLngToLayerPoint(lg.view.nw), map.getZoomScale(map.getZoom(), lg.view.zoom));
+    });
     map.on('moveend resize', () => { if (preview && lg) { lightLayout(); lightOpacity(); } });
 
     const bldS = { tiles: new Map(), loading: new Map(), failed: new Map(), url: null, lib: null, tex: null, canvas: null, ctx: null, has: false, fade0: null, timer: 0, soon: 0 };
