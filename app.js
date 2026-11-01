@@ -193,6 +193,27 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         DUSK_FULL: 0,
         PLAY_MS: 4000
     };
+    const BUILDINGS = {
+        ON: true,
+        TILEJSON: 'https://tiles.openfreemap.org/planet',
+        LAYER: 'building', HEIGHT: 'render_height',
+        LIB: 'vector-tile.js',
+        TILE_Z: 14,
+        MIN_ZOOM: 16,
+        MAX_TILES: 12,
+        CACHE_TILES: 32,
+        DEBOUNCE_MS: 250,
+        RETRY_MS: 30000,
+        DEFAULT_M: 8,
+        MAX_M: 120,
+        RES: 0.5,
+        EXAGGERATION: 1,
+        CAST_M: 150,
+        CAST_STEPS: 40,
+        SHADE: 0.7,
+        PENUMBRA_DEG: 0.6,
+        FADE_MS: 600
+    };
     map.createPane('terrain');
     const terrainPane = map.getPane('terrain');
     terrainPane.style.zIndex = 212;
@@ -220,7 +241,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }`;
     const LG_FS = `#version 300 es
 precision highp float;
-uniform sampler2D uFine, uCoarse;
+uniform sampler2D uFine, uCoarse, uBldTex;
 uniform vec2 uFineA, uCoarseA;       // texture uv at the canvas top left
 uniform vec2 uFineB, uCoarseB;       // texture uv per screen pixel
 uniform float uFineTx, uCoarseTx;    // screen pixels per texel
@@ -230,7 +251,10 @@ uniform float uMPx;                  // metres per screen pixel at the equator
 uniform vec3 uSun;                   // east, north, up
 uniform float uMax, uEx, uGain, uLGain, uLFull, uLNone, uWater, uShore, uCastPx, uCastShade, uPen, uDusk;
 uniform vec4 uShade, uLight;         // rgb + strength
+uniform vec2 uBSize;                 // building raster size in screen pixels (the canvas)
+uniform float uBld, uBMax, uBCast, uBShade, uBPen, uTerr;   // building fade, height at full red (already over uEx), reach (m), strength, soft edge; terrain weight
 const int STEPS = ${LIGHT.CAST_STEPS};
+const int BSTEPS = ${BUILDINGS.CAST_STEPS};
 float elev(vec2 p, out float v) {
     vec3 f = texture(uFine, uFineA + p * uFineB).rgb;
     vec3 c = texture(uCoarse, uCoarseA + p * uCoarseB).rgb;
@@ -240,6 +264,7 @@ float elev(vec2 p, out float v) {
     return mix(ec, ef, v);
 }
 float elev(vec2 p) { float v; return elev(p, v); }
+float bld(vec2 p) { return texture(uBldTex, p / uBSize).r * uBMax; }
 out vec4 o;
 void main() {
     vec2 p = vec2(gl_FragCoord.x, uH - gl_FragCoord.y) * uScale;
@@ -247,34 +272,60 @@ void main() {
     float e0 = elev(p, v);
     float land = smoothstep(uWater, uWater + uShore, e0);
     float dusk = uDusk * uCastShade * uShade.a;   // the shade over everything, water too, as the sun sets
-    if (land <= 0.0 || uDusk >= 1.0) { o = vec4(uShade.rgb * dusk, dusk); return; }
+    if (uDusk >= 1.0 || (land <= 0.0 && uBld <= 0.0)) { o = vec4(uShade.rgb * dusk, dusk); return; }
     float t = 3.14159265 * (1.0 - 2.0 * (uY0 + p.y * uYB));
     float mpx = uMPx / cosh(t);
-    float h = max(mix(uCoarseTx, uFineTx, v), 0.5);
-    float dx = (elev(p + vec2(h, 0.0)) - elev(p - vec2(h, 0.0))) / (2.0 * h * mpx);
-    float dy = (elev(p - vec2(0.0, h)) - elev(p + vec2(0.0, h))) / (2.0 * h * mpx);
-    vec3 n = normalize(vec3(-dx * uEx, -dy * uEx, 1.0));
-    float raw = dot(n, uSun) - uSun.z;
-    float shade = clamp(-raw * uGain, 0.0, 1.0);
-    float light = clamp(raw * uLGain, 0.0, 1.0) * smoothstep(uLNone, uLFull, n.z);
     float hz = length(uSun.xy);
-    if (hz > 0.001 && uCastPx > 0.0) {
-        vec2 d = vec2(uSun.x, -uSun.y) / hz;
-        float tanA = uSun.z / hz / uEx, sh = 0.0;
-        for (int i = 1; i <= STEPS; i++) {
-            float s = float(i) / float(STEPS);
-            float dist = s * s * uCastPx + uScale;
-            float ray = e0 + dist * mpx * tanA;
-            if (ray > uMax) break;
-            float rise = elev(p + d * dist) - ray;
-            if (rise > 0.0) sh = max(sh, rise * uEx / (dist * mpx) / uPen);
-            if (sh >= 1.0) break;
+    vec2 d = hz > 0.001 ? vec2(uSun.x, -uSun.y) / hz : vec2(0.0);
+    float tanA = hz > 0.001 ? uSun.z / hz / uEx : 0.0;
+    // building shadows: an even march over a short reach; only samples on a building count, standing on the terrain under it (water too)
+    float bs = 0.0;
+    if (uBld > 0.0 && hz > 0.001) {
+        float eb = e0 + bld(p), reach = uBCast / mpx;
+        for (int i = 1; i <= BSTEPS; i++) {
+            float dist = float(i) / float(BSTEPS) * reach;
+            float ray = eb + dist * mpx * tanA;
+            if (ray > uMax + uBMax) break;
+            vec2 q = p + d * dist;
+            float b = bld(q);
+            if (b > 0.05) {
+                float rise = elev(q) + b - ray;
+                if (rise > 0.0) bs = max(bs, rise * uEx / (dist * mpx) / uBPen);
+                if (bs >= 1.0) break;
+            }
         }
-        sh = clamp(sh, 0.0, 1.0) * uCastShade;
-        shade = max(shade, sh);
-        light *= 1.0 - sh;
+        bs = clamp(bs, 0.0, 1.0) * uBShade * uBld;
     }
-    float a = max(shade * uShade.a * land, dusk), b = light * uLight.a * land * (1.0 - uDusk) * (1.0 - a);
+    float shade = 0.0, light = 0.0;
+    if (land > 0.0) {
+        float h = max(mix(uCoarseTx, uFineTx, v), 0.5);
+        float dx = (elev(p + vec2(h, 0.0)) - elev(p - vec2(h, 0.0))) / (2.0 * h * mpx);
+        float dy = (elev(p - vec2(0.0, h)) - elev(p + vec2(0.0, h))) / (2.0 * h * mpx);
+        vec3 n = normalize(vec3(-dx * uEx, -dy * uEx, 1.0));
+        float raw = dot(n, uSun) - uSun.z;
+        shade = clamp(-raw * uGain, 0.0, 1.0);
+        light = clamp(raw * uLGain, 0.0, 1.0) * smoothstep(uLNone, uLFull, n.z);
+        if (hz > 0.001 && uCastPx > 0.0) {
+            float sh = 0.0;
+            for (int i = 1; i <= STEPS; i++) {
+                float s = float(i) / float(STEPS);
+                float dist = s * s * uCastPx + uScale;
+                float ray = e0 + dist * mpx * tanA;
+                if (ray > uMax) break;
+                float rise = elev(p + d * dist) - ray;
+                if (rise > 0.0) sh = max(sh, rise * uEx / (dist * mpx) / uPen);
+                if (sh >= 1.0) break;
+            }
+            sh = clamp(sh, 0.0, 1.0) * uCastShade;
+            shade = max(shade, sh);
+            light *= 1.0 - sh;
+        }
+        shade *= uTerr * land;   // past ZOOM_OUT_FROM the terrain fades but the building shadows stay
+        light *= uTerr * land;
+    }
+    shade = max(shade, bs);
+    light *= 1.0 - bs;
+    float a = max(shade * uShade.a, dusk), b = light * uLight.a * (1.0 - uDusk) * (1.0 - a);
     o = vec4(uShade.rgb * a + uLight.rgb * b, a + b);
 }`;
 
@@ -302,12 +353,14 @@ void main() {
         }
         gl.uniform1i(u.uFine, 0);
         gl.uniform1i(u.uCoarse, 1);
+        gl.uniform1i(u.uBldTex, 2);
         gl.clearColor(0, 0, 0, 0);
         canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); lg = false; if (pinKind) togglePin(pinKind); });
         const scratch = document.createElement('canvas');
         scratch.width = scratch.height = 512;
         lg = { canvas, gl, u, fine: null, coarse: null, view: null, colours: null, maxSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
-            ctx: scratch.getContext('2d', { willReadFrequently: true }), rgb: new Float32Array(512 * 512 * 3) };
+            ctx: scratch.getContext('2d', { willReadFrequently: true }), rgb: new Float32Array(512 * 512 * 3), terr: 1 };
+        bldSetup(gl);
         return lg;
     }
 
@@ -426,12 +479,16 @@ void main() {
         lg.coarse = nc; lg.fine = nf;
         fresh.forEach(l => { if (l) lightFill(l); });
         lightDraw();
+        bldRaster();
+        bldSchedule();
     }
 
     function lightOpacity() {
         const z = map.getZoom();
         const zoomF = smoothStep(LIGHT.ZOOM_IN_FROM, LIGHT.ZOOM_IN_TO, z) * (1 - smoothStep(LIGHT.ZOOM_OUT_FROM, LIGHT.ZOOM_OUT_TO, z));
-        terrainPane.style.opacity = preview && lg && previewWindow(preview.kind) ? String(zoomF) : '0';
+        const op = Math.max(zoomF, BUILDINGS.ON && z >= BUILDINGS.MIN_ZOOM ? 1 : 0);
+        if (lg) lg.terr = op > 0 ? zoomF / op : 1;
+        terrainPane.style.opacity = preview && lg && previewWindow(preview.kind) ? String(op) : '0';
     }
 
     function lightDraw() {
@@ -482,7 +539,18 @@ void main() {
             const col = lg.colours || (lg.colours = lightColours());
             gl.uniform4fv(u.uShade, col.shade);
             gl.uniform4fv(u.uLight, col.light);
+            gl.uniform1f(u.uTerr, lg.terr);
+            const bf = bldFade();
+            gl.activeTexture(gl.TEXTURE2);
+            gl.bindTexture(gl.TEXTURE_2D, bldS.tex);
+            gl.uniform1f(u.uBld, bf);
+            gl.uniform2f(u.uBSize, view.w, view.h);
+            gl.uniform1f(u.uBMax, BUILDINGS.MAX_M * BUILDINGS.EXAGGERATION / LIGHT.EXAGGERATION);
+            gl.uniform1f(u.uBCast, BUILDINGS.CAST_M);
+            gl.uniform1f(u.uBShade, BUILDINGS.SHADE);
+            gl.uniform1f(u.uBPen, BUILDINGS.PENUMBRA_DEG * Math.PI / 180);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
+            if (bf > 0 && bf < 1) lightDraw();
         });
     }
 
@@ -491,6 +559,149 @@ void main() {
         L.DomUtil.setTransform(lg.canvas, map._latLngToNewLayerPoint(lg.view.nw, e.zoom, e.center), map.getZoomScale(e.zoom));
     });
     map.on('moveend resize', () => { if (preview && lg) { lightLayout(); lightOpacity(); } });
+
+    const bldS = { tiles: new Map(), loading: new Map(), failed: new Map(), url: null, lib: null, tex: null, canvas: null, ctx: null, has: false, fade0: null, timer: 0, soon: 0 };
+
+    function bldSetup(gl) {
+        bldS.tex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, bldS.tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array(1));
+        bldS.canvas = document.createElement('canvas');
+        bldS.ctx = bldS.canvas.getContext('2d', { alpha: false });
+    }
+
+    function bldActive() {
+        return BUILDINGS.ON && !!preview && !!lg && !!lg.view && lg.view.zoom >= BUILDINGS.MIN_ZOOM && !!previewWindow(preview.kind);
+    }
+
+    function bldFade() {
+        if (!bldS.has || !bldActive()) return 0;
+        if (bldS.fade0 === null) bldS.fade0 = performance.now();
+        return Math.max(0.001, smoothStep(0, BUILDINGS.FADE_MS, performance.now() - bldS.fade0));
+    }
+
+    function bldStop() {
+        clearTimeout(bldS.timer);
+        bldS.has = false; bldS.fade0 = null;
+    }
+
+    function bldReady() {
+        if (!bldS.lib) bldS.lib = new Promise((ok, no) => {
+            if (window.VectorTile && window.Pbf) return ok();
+            const sc = document.createElement('script');
+            sc.src = BUILDINGS.LIB; sc.async = true; sc.onload = ok; sc.onerror = no;
+            document.head.appendChild(sc);
+        }).catch(e => { bldS.lib = null; throw e; });
+        if (!bldS.url) bldS.url = fetch(BUILDINGS.TILEJSON).then(r => r.json()).then(j => j.tiles[0]).catch(e => { bldS.url = null; throw e; });
+        return Promise.all([bldS.lib, bldS.url]).then(r => r[1]);
+    }
+
+    function bldTile(x, y, key) {
+        if (bldS.loading.has(key)) return bldS.loading.get(key);
+        const z = BUILDINGS.TILE_Z;
+        const job = bldReady().then(url => fetch(url.replace('{z}', z).replace('{x}', x).replace('{y}', y)))
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+            .then(buf => {
+                const layer = new VectorTile(new Pbf(new Uint8Array(buf))).layers[BUILDINGS.LAYER], out = [];
+                const n = layer ? layer.length : 0, k = layer ? 256 / Math.pow(2, z) / layer.extent : 0, ox = x * 256 / Math.pow(2, z), oy = y * 256 / Math.pow(2, z);
+                for (let i = 0; i < n; i++) {
+                    const f = layer.feature(i);
+                    if (f.type !== 3) continue;
+                    const h = Math.min(BUILDINGS.MAX_M, Number(f.properties[BUILDINGS.HEIGHT]) || BUILDINGS.DEFAULT_M);
+                    const b = [Infinity, Infinity, -Infinity, -Infinity], rings = f.loadGeometry().map(ring => {
+                        const r = new Float64Array(ring.length * 2);
+                        ring.forEach((p, j) => {
+                            const px = ox + p.x * k, py = oy + p.y * k;
+                            r[2 * j] = px; r[2 * j + 1] = py;
+                            if (px < b[0]) b[0] = px; if (py < b[1]) b[1] = py; if (px > b[2]) b[2] = px; if (py > b[3]) b[3] = py;
+                        });
+                        return r;
+                    });
+                    out.push({ h, rings, b });
+                }
+                bldS.tiles.set(key, out);
+                while (bldS.tiles.size > BUILDINGS.CACHE_TILES) bldS.tiles.delete(bldS.tiles.keys().next().value);
+                bldS.failed.delete(key);
+                bldRasterSoon();
+            })
+            .catch(() => { bldS.failed.set(key, Date.now()); })
+            .finally(() => bldS.loading.delete(key));
+        bldS.loading.set(key, job);
+        return job;
+    }
+
+    function bldTiles() {
+        const g = lightGrid(BUILDINGS.TILE_Z, lg.view), list = [];
+        const cx = (g.cols - 1) / 2, cy = (g.rows - 1) / 2;
+        for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+            const x = ((g.x0 + c) % g.n + g.n) % g.n, y = g.y0 + r;
+            list.push({ x, y, key: x + '/' + y, d: (c - cx) ** 2 + (r - cy) ** 2 });
+        }
+        return list.sort((a, b) => a.d - b.d).slice(0, BUILDINGS.MAX_TILES);
+    }
+
+    function bldSchedule() {
+        clearTimeout(bldS.timer);
+        if (bldActive()) bldS.timer = setTimeout(bldFetch, BUILDINGS.DEBOUNCE_MS);
+    }
+
+    function bldFetch() {
+        if (!bldActive()) return;
+        const now = Date.now();
+        for (const t of bldTiles()) {
+            const keep = bldS.tiles.get(t.key);
+            if (keep) { bldS.tiles.delete(t.key); bldS.tiles.set(t.key, keep); continue; }
+            if (now - (bldS.failed.get(t.key) || -Infinity) < BUILDINGS.RETRY_MS) continue;
+            bldTile(t.x, t.y, t.key);
+        }
+    }
+
+    function bldRasterSoon() {
+        if (!bldS.soon) bldS.soon = requestAnimationFrame(() => { bldS.soon = 0; bldRaster(); });
+    }
+
+    function bldRaster() {
+        if (!lg || !bldS.tex) return;
+        const gl = lg.gl;
+        if (!bldActive()) {
+            if (bldS.has) { bldS.has = false; bldS.fade0 = null; }
+            return;
+        }
+        const view = lg.view, k = BUILDINGS.RES, s = Math.pow(2, view.zoom) * k, ox = view.px * k, oy = view.py * k;
+        const cw = Math.max(1, Math.round(view.w * k)), ch = Math.max(1, Math.round(view.h * k));
+        const x0 = view.px / s * k, y0 = view.py / s * k, x1 = x0 + cw / s, y1 = y0 + ch / s;
+        const list = [];
+        for (const t of bldTiles()) for (const f of bldS.tiles.get(t.key) || []) {
+            if (f.b[2] >= x0 && f.b[0] <= x1 && f.b[3] >= y0 && f.b[1] <= y1) list.push(f);
+        }
+        if (!list.length && !bldS.has) return;
+        list.sort((a, b) => a.h - b.h);
+        const c = bldS.canvas, ctx = bldS.ctx;
+        if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; }
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, cw, ch);
+        for (const f of list) {
+            ctx.fillStyle = `rgb(${Math.max(1, Math.round(f.h / BUILDINGS.MAX_M * 255))},0,0)`;
+            ctx.beginPath();
+            for (const r of f.rings) {
+                ctx.moveTo(r[0] * s - ox, r[1] * s - oy);
+                for (let i = 2; i < r.length; i += 2) ctx.lineTo(r[i] * s - ox, r[i + 1] * s - oy);
+                ctx.closePath();
+            }
+            ctx.fill();
+        }
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, bldS.tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, c);
+        bldS.has = list.length > 0;
+        if (!bldS.has) bldS.fade0 = null;
+        lightDraw();
+    }
 
     function previewShow() {
         const on = !!preview && !!previewWindow(preview.kind);
@@ -571,6 +782,7 @@ void main() {
         if (!kind || !lightGL()) {
             const was = !!preview;
             preview = null;
+            bldStop();
             previewShow();
             lightOpacity();
             if (was) { lightDraw(); renderSunArrows(map.getCenter()); }

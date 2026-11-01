@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-GHM-v4.1.9";
+const CACHE = "pwabuilder-GHM-v4.1.10";
 const ASSET_CACHE = CACHE + "-assets";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
@@ -39,6 +39,7 @@ const PRECACHE_CDN = [
 
 const NO_CACHE_HOSTS = [
   "nominatim.openstreetmap.org",
+  "tiles.openfreemap.org",
   "www.googletagmanager.com",
   "www.google-analytics.com"
 ];
