@@ -28,7 +28,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const dateParam = params.get('date');
 
     const mapOptions = {
-        minZoom: 4,
+        minZoom: 3,
         maxZoom: 18,
         center: [51.505, -0.09],
         zoom: 5,
@@ -36,8 +36,18 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         attributionControl: false
     };
 
-    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+    const hasPos = !isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    if (hasPos) {
         mapOptions.center = [lat, lng];
+    }
+
+    const zParam = parseFloat(params.get('z'));
+    const webglOk = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } })();
+    const startOnGlobe = webglOk && (!hasPos || zParam < 4);
+    let globeOn = false, gl = null;
+    if (startOnGlobe) {
+        mapOptions.zoom = 4;
+        if (!hasPos) mapOptions.center = [51.5074, -0.1278];
     }
 
     const map = L.map('map', mapOptions);
@@ -46,25 +56,26 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
     const TILE_LOADING = { keepBuffer: 4, updateWhenIdle: false, updateWhenZooming: false };
 
-    L.tileLayer(IMAGERY_URL, {
+    const imageryLayer = L.tileLayer(IMAGERY_URL, {
         attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS User Community',
         maxZoom: 18,
         ...TILE_LOADING
-    }).addTo(map);
+    });
 
     map.createPane('labels');
     map.getPane('labels').style.zIndex = 250;
     map.getPane('labels').style.pointerEvents = 'none';
-    L.tileLayer(LABELS_URL, {
+    const labelsLayer = L.tileLayer(LABELS_URL, {
         pane: 'labels',
         maxZoom: 18,
         ...TILE_LOADING
-    }).addTo(map);
+    });
+    if (!startOnGlobe) { imageryLayer.addTo(map); labelsLayer.addTo(map); }
 
     const NIGHT = {
         W: 720, H: 360,
-        SHADE_FROM: 0,
-        SHADE_FULL: -12,
+        SHADE_FROM: 1,
+        SHADE_FULL: -4,
         GOLD_LOW: -1,
         GOLD_PEAK: 2,
         GOLD_TOP: 12,
@@ -104,7 +115,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     function drawNight() {
         const cs = getComputedStyle(document.documentElement);
-        const shade = parseFloat(cs.getPropertyValue('--night-shade')) || 0.45;
+        const shade = parseFloat(cs.getPropertyValue('--night-shade')) || 0.84;
         const gold = parseFloat(cs.getPropertyValue('--night-gold')) || 0.3;
         const [nr, ng, nb] = cs.getPropertyValue('--night-rgb').trim().split(/\s+/).map(Number);
         const [ar, ag, ab] = cs.getPropertyValue('--amber-rgb').trim().split(/\s+/).map(Number);
@@ -148,6 +159,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     function nightOpacity() {
         nightPane.style.opacity = nightOn && nightUrl ? String(1 - smoothStep(NIGHT.ZOOM_FADE_FROM, NIGHT.ZOOM_FADE_TO, map.getZoom())) : '0';
+        if (gl) globeNight();
     }
 
     function setNightVisible(on) {
@@ -1553,7 +1565,8 @@ void main() {
                 const c = center.wrap();
                 const pad = n => String(n).padStart(2, '0');
                 const dateStr = `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
-                const q = `?lat=${c.lat.toFixed(5)}&lng=${c.lng.toFixed(5)}&date=${dateStr}`;
+                const z = globeOn ? `&z=${globeUrlZoom()}` : '';
+                const q = `?lat=${c.lat.toFixed(5)}&lng=${c.lng.toFixed(5)}&date=${dateStr}${z}`;
                 history.replaceState(null, '', window.location.pathname + q);
             } catch (e) { }
         }, 400);
@@ -2003,9 +2016,14 @@ void main() {
 
     const zoomInBtn = el('zoomIn');
     const zoomOutBtn = el('zoomOut');
-    zoomInBtn.addEventListener('click', () => map.zoomIn());
-    zoomOutBtn.addEventListener('click', () => map.zoomOut());
+    zoomInBtn.addEventListener('click', () => { if (globeOn) { if (gl) gl.zoomIn(); } else map.zoomIn(); });
+    zoomOutBtn.addEventListener('click', () => { if (globeOn) { if (gl) gl.zoomOut(); } else map.zoomOut(); });
     function updateZoomButtons() {
+        if (globeOn) {
+            zoomInBtn.disabled = false;
+            zoomOutBtn.disabled = !!gl && gl.getZoom() <= gl.getMinZoom() + 0.01;
+            return;
+        }
         zoomInBtn.disabled = map.getZoom() >= map.getMaxZoom();
         zoomOutBtn.disabled = map.getZoom() <= map.getMinZoom();
     }
@@ -2521,6 +2539,315 @@ void main() {
     document.addEventListener('pointerdown', e => {
         if (shareHintOn && e.target.closest && e.target.closest('button, a, input, select, textarea, [role="button"], .sun-chevron-hit, .leaflet-control')) hideShareHint();
     }, true);
+
+    const GLOBE = {
+        JS: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
+        CSS: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css',
+        TO_FLAT: 3,
+        FLAT_MIN: 4,
+        WARM: 2.4,
+        ENTER_TO: 2,
+        FADE_MS: 250,
+        CAP_N: '#0f4f60', CAP_S: '#f5f8fe', CAP_LAT: 80,
+        DROP_MS: 60000,
+        NIGHT_COORDS: [[-180, MERC_MAX], [180, MERC_MAX], [180, -MERC_MAX], [-180, -MERC_MAX]]
+    };
+    const appEl = el('app'), globeEl = el('globe');
+    let glLoading = null, glDropTimer = null, glEntering = false, glSyncing = false, glQuietUntil = 0, glNightUrl = '', glZoom = 2;
+
+    const globeFitZoom = lat => Math.max(0.2, Math.min(2.2, 1.9 + Math.log2(Math.min(window.innerWidth * 0.84, window.innerHeight * 0.75) * Math.cos(lat * Math.PI / 180) / 469)));
+    const globeUrlZoom = () => (Math.min(GLOBE.TO_FLAT, gl ? gl.getZoom() : glZoom) + 1).toFixed(1);
+
+    function loadGlobeLib() {
+        if (window.maplibregl) return Promise.resolve();
+        if (!glLoading) {
+            const css = document.createElement('link');
+            css.rel = 'stylesheet'; css.href = GLOBE.CSS;
+            document.head.appendChild(css);
+            glLoading = new Promise((ok, fail) => {
+                const s = document.createElement('script');
+                s.src = GLOBE.JS; s.async = true; s.onload = ok; s.onerror = fail;
+                document.head.appendChild(s);
+            });
+            glLoading.catch(() => { glLoading = null; });
+        }
+        return glLoading;
+    }
+
+    let poleProto = false;
+    function addPoleProtocol() {
+        if (poleProto) return;
+        poleProto = true;
+        maplibregl.addProtocol('ghmpole', async (params, abort) => {
+            const url = params.url.slice(10).split('#')[0], r = await fetch(url + '?ghm=pole2', { mode: 'cors', signal: abort.signal });
+            if (!r.ok) throw new Error('tile ' + r.status);
+            const m = /\/(\d+)\/(\d+)\/\d+$/.exec(url), z = m ? +m[1] : -1, y = m ? +m[2] : -1, last = (1 << z) - 1;
+            if (!m || (y !== 0 && y !== last)) return { data: await r.arrayBuffer() };
+            const img = await createImageBitmap(await r.blob()), cv = document.createElement('canvas');
+            const S = img.width === 256 ? 255 : img.width - 1, labels = /Reference/.test(url);
+            cv.width = S; cv.height = S;
+            const ctx = cv.getContext('2d'), H = S, band = Math.max(3, Math.round(H * 0.03));
+            ctx.drawImage(img, 0, 0, S, S);
+            const edge = (top, hex) => {
+                if (labels) { ctx.clearRect(0, top ? 0 : H - band, S, band); return; }
+                const g = ctx.createLinearGradient(0, top ? 0 : H, 0, top ? band : H - band);
+                g.addColorStop(0, hex); g.addColorStop(0.3, hex); g.addColorStop(1, hex + '00');
+                ctx.fillStyle = g; ctx.fillRect(0, top ? 0 : H - band, S, band);
+            };
+            if (y === 0) edge(true, capColour(true));
+            if (y === last) edge(false, capColour(false));
+            const blob = await new Promise(ok => cv.toBlob(ok, labels ? 'image/png' : 'image/jpeg', 0.9));
+            return { data: await blob.arrayBuffer() };
+        });
+    }
+
+    function makeGlobe(c, zoom) {
+        addPoleProtocol();
+        const touch = window.matchMedia('(pointer: coarse)').matches;
+        gl = new maplibregl.Map({
+            container: globeEl,
+            style: {
+                version: 8,
+                projection: { type: 'vertical-perspective' },
+                sky: { 'sky-color': '#5d9bd8', 'horizon-color': '#d9e8f2', 'fog-color': '#dfe9ee', 'atmosphere-blend': 1 },
+                sources: {
+                    imagery: { type: 'raster', tiles: ['ghmpole://' + IMAGERY_URL], tileSize: 256, maxzoom: 18 },
+                    labels: { type: 'raster', tiles: ['ghmpole://' + LABELS_URL], tileSize: 256, maxzoom: 18 },
+                    capN: { type: 'image', url: poleCap(GLOBE.CAP_N, true), coordinates: [[-180, MERC_MAX], [180, MERC_MAX], [180, GLOBE.CAP_LAT], [-180, GLOBE.CAP_LAT]] },
+                    capS: { type: 'image', url: poleCap(GLOBE.CAP_S, false), coordinates: [[-180, -GLOBE.CAP_LAT], [180, -GLOBE.CAP_LAT], [180, -MERC_MAX], [-180, -MERC_MAX]] }
+                },
+                layers: [
+                    { id: 'bg', type: 'background', paint: { 'background-color': GLOBE.CAP_N } },
+                    { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 100 } },
+                    { id: 'capN', type: 'raster', source: 'capN', paint: { 'raster-fade-duration': 0 } },
+                    { id: 'capS', type: 'raster', source: 'capS', paint: { 'raster-fade-duration': 0 } },
+                    { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-fade-duration': 100 } }
+                ]
+            },
+            center: [c.lng, c.lat], zoom,
+            minZoom: 0, maxZoom: GLOBE.TO_FLAT + 1, maxPitch: 0,
+            dragRotate: false, pitchWithRotate: false, touchPitch: false, keyboard: false, attributionControl: false,
+            pixelRatio: Math.min(window.devicePixelRatio || 1, touch ? 1.5 : 2),
+            fadeDuration: 100, maxTileCacheZoomLevels: 3, refreshExpiredTiles: false, validateStyle: false
+        });
+        gl.touchZoomRotate.disableRotation();
+        gl.once('style.load', () => { if (!gl.isMoving()) gl.jumpTo({ center: [c.lng, c.lat], zoom }); });
+        gl.on('load', () => { glNightUrl = ''; globeNight(); });
+        gl.on('movestart', () => { if (globeOn) mapEl.classList.add('is-moving'); });
+        gl.on('zoom', () => {
+            if (!globeOn || glEntering) return;
+            const z = gl.getZoom();
+            if (z >= GLOBE.TO_FLAT) showFlat(true);
+            else if (z >= GLOBE.WARM) warmFlat();
+        });
+        gl.on('moveend', () => {
+            glEntering = false;
+            if (!globeOn) return;
+            followGlobe();
+        });
+        gl.on('click', e => {
+            gl.easeTo({ center: e.lngLat, duration: reducedMotion() ? 0 : 600 });
+            map.fire('click', { latlng: L.latLng(e.lngLat.lat, e.lngLat.lng) });
+        });
+    }
+
+    function poleCap(hex, north) {
+        const cv = document.createElement('canvas');
+        cv.width = 2; cv.height = 64;
+        const ctx = cv.getContext('2d'), g = ctx.createLinearGradient(0, north ? 0 : 64, 0, north ? 64 : 0);
+        g.addColorStop(0, hex + 'ff'); g.addColorStop(0.15, hex + 'ff'); g.addColorStop(0.55, hex + '99'); g.addColorStop(1, hex + '00');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 64);
+        return cv.toDataURL('image/png');
+    }
+
+    function setGlobeInput(on) {
+        for (const k of ['scrollZoom', 'dragPan', 'touchZoomRotate', 'doubleClickZoom', 'boxZoom']) if (gl[k]) gl[k][on ? 'enable' : 'disable']();
+        if (on) gl.touchZoomRotate.disableRotation();
+    }
+
+    let warmAt = 0;
+    function warmFlat() {
+        if (!map.hasLayer(imageryLayer)) { imageryLayer.addTo(map); labelsLayer.addTo(map); }
+        if (Date.now() - warmAt > 150) { warmAt = Date.now(); followGlobe(); }
+    }
+
+    function followGlobe() {
+        const c = gl.getCenter();
+        glZoom = gl.getZoom();
+        glSyncing = true;
+        map.setView([c.lat, c.lng], GLOBE.FLAT_MIN, { animate: false });
+        glSyncing = false;
+        syncUrl(map.getCenter());
+        updateZoomButtons();
+    }
+
+    let glNightCanvas = null, glNightBlob = '';
+    function globeNight() {
+        if (!gl || !gl.loaded()) return;
+        if (nightUrl && nightUrl !== glNightUrl) {
+            glNightUrl = nightUrl;
+            const W = nightImg.width, H = nightImg.height, K = Math.round(H / 24), d = new Uint8ClampedArray(nightImg.data);
+            for (const top of [true, false]) {
+                const r0 = top ? 0 : H - 1;
+                let pr = 0, pg = 0, pb = 0, pa = 0;
+                for (let i = 0; i < W; i++) { const k = (r0 * W + i) * 4, a = d[k + 3]; pr += d[k] * a; pg += d[k + 1] * a; pb += d[k + 2] * a; pa += a; }
+                const ma = pa / W, mr = pr / W, mg = pg / W, mb = pb / W;
+                glPoleNight[top ? 0 : 1] = ma ? [mr / ma, mg / ma, mb / ma, ma / 255] : [0, 0, 0, 0];
+                for (let j = 0; j < K; j++) {
+                    const t = smoothStep(0, 1, 1 - j / K), row = top ? j : H - 1 - j;
+                    for (let i = 0; i < W; i++) {
+                        const k = (row * W + i) * 4, a = d[k + 3];
+                        const na = a + (ma - a) * t;
+                        if (na < 0.5) { d[k + 3] = 0; continue; }
+                        d[k] = (d[k] * a + (mr - d[k] * a) * t) / na;
+                        d[k + 1] = (d[k + 1] * a + (mg - d[k + 1] * a) * t) / na;
+                        d[k + 2] = (d[k + 2] * a + (mb - d[k + 2] * a) * t) / na;
+                        d[k + 3] = na;
+                    }
+                }
+            }
+            if (!glNightCanvas) { glNightCanvas = document.createElement('canvas'); glNightCanvas.width = W; glNightCanvas.height = H; }
+            glNightCanvas.getContext('2d').putImageData(new ImageData(d, W, H), 0, 0);
+            glNightCanvas.toBlob(blob => {
+                if (!blob || !gl) return;
+                const old = glNightBlob;
+                glNightBlob = URL.createObjectURL(blob);
+                const src = gl.getSource('night');
+                if (src) src.updateImage({ url: glNightBlob, coordinates: GLOBE.NIGHT_COORDS });
+                else {
+                    gl.addSource('night', { type: 'image', url: glNightBlob, coordinates: GLOBE.NIGHT_COORDS });
+                    gl.addLayer({ id: 'night', type: 'raster', source: 'night', paint: { 'raster-fade-duration': 0, 'raster-opacity': nightOn ? 1 : 0, 'raster-opacity-transition': { duration: 600 } } }, 'labels');
+                }
+                if (old) setTimeout(() => URL.revokeObjectURL(old), 5000);
+            }, 'image/png');
+        }
+        if (gl.getLayer('night')) gl.setPaintProperty('night', 'raster-opacity', nightOn ? 1 : 0);
+        const key = [capColour(true), capColour(false)].join();
+        if (gl.getLayer('bg')) gl.setPaintProperty('bg', 'background-color', capColour(true));
+        if (key !== glPoleKey && gl.getSource('imagery')) { glPoleKey = key; gl.getSource('imagery').setTiles(['ghmpole://' + IMAGERY_URL + '#' + (++glPoleRev)]); }
+    }
+    let glPoleNight = [[0, 0, 0, 0], [0, 0, 0, 0]], glPoleKey = [GLOBE.CAP_N, GLOBE.CAP_S].join(), glPoleRev = 0;
+    function capColour(north) {
+        const hex = north ? GLOBE.CAP_N : GLOBE.CAP_S, n = glPoleNight[north ? 0 : 1], a = nightOn ? n[3] : 0;
+        return '#' + [1, 3, 5].map((p, i) => Math.round(parseInt(hex.substr(p, 2), 16) * (1 - a) + n[i] * a).toString(16).padStart(2, '0')).join('');
+    }
+
+    function showGlobe(c, zoom, ease) {
+        if (globeOn || !webglOk) return;
+        globeOn = true;
+        clearTimeout(glDropTimer);
+        if (!starsCv) drawStars();
+        glQuietUntil = Date.now() + 800;
+        glZoom = zoom;
+        if (!ease) appEl.classList.add('globe-on');
+        updateZoomButtons();
+        loadGlobeLib().then(() => {
+            if (!globeOn) return;
+            glEntering = !!ease;
+            if (!gl) makeGlobe(c, zoom);
+            else { gl.resize(); setGlobeInput(true); gl.jumpTo({ center: [c.lng, c.lat], zoom }); }
+            if (ease) {
+                gl.easeTo({ ...ease, duration: reducedMotion() ? 0 : ease.duration });
+                const reveal = () => {
+                    if (!globeOn) return;
+                    appEl.classList.add('globe-on');
+                };
+                gl.once('render', reveal);
+                gl.triggerRepaint();
+            }
+            globeNight();
+            updateZoomButtons();
+        }).catch(() => showFlat(false));
+        setTimeout(() => { if (globeOn && gl && gl.getZoom() < GLOBE.WARM) { map.removeLayer(imageryLayer); map.removeLayer(labelsLayer); } }, GLOBE.FADE_MS + 400);
+    }
+
+    let starsCv = null, starsTimer = null;
+    function drawStars() {
+        if (!starsCv) {
+            starsCv = document.createElement('canvas');
+            starsCv.className = 'globe-stars';
+            globeEl.insertBefore(starsCv, globeEl.firstChild);
+            window.addEventListener('resize', () => { clearTimeout(starsTimer); starsTimer = setTimeout(drawStars, 200); });
+        }
+        const w = globeEl.clientWidth || innerWidth, h = globeEl.clientHeight || innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+        starsCv.width = Math.round(w * dpr); starsCv.height = Math.round(h * dpr);
+        const ctx = starsCv.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        let seed = 20261102;
+        const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+        const tints = ['255,255,255', '255,255,255', '255,255,255', '214,226,255', '190,210,255', '255,240,214', '255,222,186'];
+        const ang = -0.5, cx = w * 0.5, cy = h * 0.5, len = Math.hypot(w, h), ux = Math.cos(ang), uy = Math.sin(ang), bandW = Math.max(w, h) * 0.13;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+        for (let i = 0; i < 70; i++) {
+            const x = (rnd() - 0.5) * len, y = (rnd() - 0.5) * bandW * 1.2, r = bandW * (0.35 + rnd() * 0.6);
+            const g = ctx.createRadialGradient(x, y, 0, x, y, r), warm = rnd() < 0.35;
+            g.addColorStop(0, warm ? 'rgba(200,170,210,0.05)' : 'rgba(150,170,230,0.05)'); g.addColorStop(1, 'rgba(120,140,200,0)');
+            ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+        ctx.restore();
+        const star = (x, y, r, a, tint) => { ctx.fillStyle = `rgba(${tint},${a})`; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); };
+        const n = Math.min(2200, Math.round(w * h / 650));
+        for (let i = 0; i < n; i++) {
+            const p = rnd(), r = p < 0.75 ? 0.3 + rnd() * 0.35 : p < 0.97 ? 0.6 + rnd() * 0.5 : 1 + rnd() * 0.6;
+            star(rnd() * w, rnd() * h, r, 0.25 + Math.pow(rnd(), 2) * 0.75, tints[(rnd() * tints.length) | 0]);
+        }
+        for (let i = 0; i < n * 0.6; i++) {
+            const t = (rnd() - 0.5) * len, o = (rnd() + rnd() + rnd() - 1.5) * bandW * 0.7;
+            star(cx + ux * t - uy * o, cy + uy * t + ux * o, 0.25 + rnd() * 0.4, 0.2 + rnd() * 0.45, tints[(rnd() * tints.length) | 0]);
+        }
+        const bright = Math.max(8, Math.round(n / 120));
+        for (let i = 0; i < bright; i++) {
+            const x = rnd() * w, y = rnd() * h, tint = tints[(rnd() * tints.length) | 0], r = 5 + rnd() * 7;
+            const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+            g.addColorStop(0, `rgba(${tint},0.55)`); g.addColorStop(0.25, `rgba(${tint},0.12)`); g.addColorStop(1, `rgba(${tint},0)`);
+            ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            star(x, y, 0.9 + rnd() * 0.6, 1, '255,255,255');
+        }
+    }
+
+    function showFlat(matchView) {
+        if (!globeOn) return;
+        globeOn = false;
+        if (gl) { gl.stop(); setGlobeInput(false); }
+        if (matchView && gl) {
+            const c = gl.getCenter();
+            glSyncing = true;
+            map.setView([c.lat, c.lng], Math.max(GLOBE.FLAT_MIN, gl.getZoom() + 1), { animate: false });
+            glSyncing = false;
+        }
+        if (!map.hasLayer(imageryLayer)) { imageryLayer.addTo(map); labelsLayer.addTo(map); }
+        appEl.classList.remove('globe-on');
+        nightOpacity();
+        updateZoomButtons();
+        syncUrl(map.getCenter());
+        clearTimeout(glDropTimer);
+        glDropTimer = setTimeout(() => { if (!globeOn && gl) { gl.remove(); gl = null; } }, GLOBE.DROP_MS);
+    }
+
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    map.on('zoomanim', e => {
+        if (globeOn || e.zoom >= GLOBE.FLAT_MIN) return;
+        showGlobe(map.getCenter(), GLOBE.TO_FLAT - 0.001, { center: [e.center.lng, e.center.lat], zoom: e.zoom - 1, duration: 250, easing: easeOut });
+    });
+    map.on('zoom', () => {
+        if (globeOn || glSyncing || map._animatingZoom || map.getZoom() >= GLOBE.FLAT_MIN - 0.2) return;
+        showGlobe(map.getCenter(), map.getZoom() - 1, { zoom: GLOBE.ENTER_TO, duration: 500, easing: easeOut });
+    });
+    map.on('zoomend', () => {
+        if (globeOn && map.getZoom() < GLOBE.FLAT_MIN) {
+            glSyncing = true;
+            map.setView(map.getCenter(), GLOBE.FLAT_MIN, { animate: false });
+            glSyncing = false;
+        }
+    });
+    map.on('movestart', () => {
+        if (globeOn && !glSyncing && Date.now() > glQuietUntil && map.getZoom() >= GLOBE.FLAT_MIN) showFlat(false);
+    });
+
+    if (startOnGlobe) {
+        const c = map.getCenter();
+        showGlobe(c, hasPos && zParam >= 0 ? Math.max(0, zParam - 1) : globeFitZoom(c.lat), null);
+    }
 
     const dateMatch = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(dateParam || '');
     if (dateMatch) {
