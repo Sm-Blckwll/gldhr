@@ -76,7 +76,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
         W: 720, H: 360,
         SHADE_FROM: 1,
         SHADE_FULL: -4,
-        GOLD_LOW: -1,
+        GOLD_LOW: -4,
         GOLD_PEAK: 2,
         GOLD_TOP: 12,
         ZOOM_FADE_FROM: 7,
@@ -128,7 +128,8 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
             const a = row.s * sd, b = row.c * cd;
             for (let i = 0; i < W; i++, k += 4) {
                 const h = Math.asin(Math.max(-1, Math.min(1, a + b * cosH[i]))) * deg;
-                const sA = shade * smoothStep(NIGHT.SHADE_FROM, NIGHT.SHADE_FULL, h);
+                const tS = Math.max(0, Math.min(1, (NIGHT.SHADE_FROM - h) / (NIGHT.SHADE_FROM - NIGHT.SHADE_FULL)));
+                const sA = shade * (1 - (1 - tS) * (1 - tS));
                 const gA = gold * smoothStep(NIGHT.GOLD_LOW, NIGHT.GOLD_PEAK, h) * (1 - smoothStep(NIGHT.GOLD_PEAK, NIGHT.GOLD_TOP, h));
                 const al = sA + gA;
                 if (al < 0.004) { px[k + 3] = 0; continue; }
