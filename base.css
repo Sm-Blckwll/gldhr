@@ -29,7 +29,7 @@
   --amber-rgb: 245 160 11;
   --amber-text: #8a4e00;
   --on-amber: #2a1700;
-  --night-shade: 0.84;
+  --night-shade: 0.66;
   --night-rgb: 6 12 34;
   --night-gold: 0.30;
   --terrain-shade: 0.80;
@@ -81,7 +81,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --night-shade: 0.9;
+    --night-shade: 0.72;
     --night-gold: 0.34;
     --terrain-shade: 0.85;
     --terrain-light: 0.44;

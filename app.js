@@ -115,7 +115,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     function drawNight() {
         const cs = getComputedStyle(document.documentElement);
-        const shade = parseFloat(cs.getPropertyValue('--night-shade')) || 0.84;
+        const shade = parseFloat(cs.getPropertyValue('--night-shade')) || 0.66;
         const gold = parseFloat(cs.getPropertyValue('--night-gold')) || 0.3;
         const [nr, ng, nb] = cs.getPropertyValue('--night-rgb').trim().split(/\s+/).map(Number);
         const [ar, ag, ab] = cs.getPropertyValue('--amber-rgb').trim().split(/\s+/).map(Number);
@@ -2622,7 +2622,7 @@ void main() {
                     { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 100 } },
                     { id: 'capN', type: 'raster', source: 'capN', paint: { 'raster-fade-duration': 0 } },
                     { id: 'capS', type: 'raster', source: 'capS', paint: { 'raster-fade-duration': 0 } },
-                    { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-fade-duration': 100 } }
+                    { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-fade-duration': 300, 'raster-opacity': 0, 'raster-opacity-transition': { duration: 450, delay: 0 } } }
                 ]
             },
             center: [c.lng, c.lat], zoom,
@@ -2634,6 +2634,12 @@ void main() {
         gl.touchZoomRotate.disableRotation();
         gl.once('style.load', () => { if (!gl.isMoving()) gl.jumpTo({ center: [c.lng, c.lat], zoom }); });
         gl.on('load', () => { glNightUrl = ''; globeNight(); });
+        const labelsIn = () => {
+            if (!gl.isSourceLoaded('labels')) return;
+            gl.setPaintProperty('labels', 'raster-opacity', 1);
+            gl.off('sourcedata', labelsIn); gl.off('idle', labelsIn);
+        };
+        gl.on('sourcedata', labelsIn); gl.on('idle', labelsIn);
         gl.on('movestart', () => { if (globeOn) mapEl.classList.add('is-moving'); });
         gl.on('zoom', () => {
             if (!globeOn || glEntering) return;
