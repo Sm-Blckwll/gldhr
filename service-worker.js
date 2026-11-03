@@ -1,5 +1,7 @@
-const CACHE = "pwabuilder-GHM-v4.2.3";
+const CACHE = "pwabuilder-GHM-v4.2.4";
 const ASSET_CACHE = CACHE + "-assets";
+const TILE_CACHE = CACHE + "-tiles";
+const TILE_MAX = 1500;
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
@@ -29,13 +31,21 @@ const PRECACHE_FONTS = [
   "/fonts/NotoSans-OFL.txt"
 ];
 
-const PRECACHE_CDN = [
-  "https://unpkg.com/leaflet@1.9.2/dist/leaflet.css",
-  "https://unpkg.com/leaflet@1.9.2/dist/leaflet.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js",
-  "https://cdn.jsdelivr.net/npm/moment-timezone@0.5.34/builds/moment-timezone-with-data.min.js",
-  "https://cdn.jsdelivr.net/npm/tz-lookup@6.1.25"
+const PRECACHE_LIB = [
+  "/lib/leaflet/leaflet.css",
+  "/lib/leaflet/leaflet.js",
+  "/lib/leaflet/images/layers.png",
+  "/lib/leaflet/images/layers-2x.png",
+  "/lib/leaflet/images/marker-icon.png",
+  "/lib/moment/moment.min.js",
+  "/lib/moment-timezone/moment-timezone-with-data.min.js",
+  "/lib/tz-lookup/tz.js",
+  "/lib/maplibre-gl/maplibre-gl.css",
+  "/lib/maplibre-gl/maplibre-gl.js",
+  "/background_hero.webp"
 ];
+
+const TILE_HOSTS = ["server.arcgisonline.com"];
 
 const NO_CACHE_HOSTS = [
   "nominatim.openstreetmap.org",
@@ -58,12 +68,7 @@ self.addEventListener('install', (event) => {
     await Promise.all(PRECACHE_OWN.map((url) => own.add(url).catch(() => {})));
     const assets = await caches.open(ASSET_CACHE);
     await Promise.all(PRECACHE_FONTS.map((url) => assets.add(url).catch(() => {})));
-    await Promise.all(PRECACHE_CDN.map(async (url) => {
-      try {
-        const request = new Request(url, { mode: 'no-cors' });
-        await assets.put(request, await fetch(request));
-      } catch (e) { }
-    }));
+    await Promise.all(PRECACHE_LIB.map((url) => (/\.(js|css)$/.test(url) ? own : assets).add(url).catch(() => {})));
   })());
 });
 
@@ -95,6 +100,17 @@ workbox.routing.registerRoute(
     networkTimeoutSeconds: 5,
     fetchOptions: { cache: 'no-cache' },
     plugins: [normaliseOwnKey]
+  })
+);
+
+workbox.routing.registerRoute(
+  ({ url }) => TILE_HOSTS.includes(url.hostname),
+  new workbox.strategies.StaleWhileRevalidate({
+    cacheName: TILE_CACHE,
+    plugins: [
+      new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [0, 200] }),
+      new workbox.expiration.ExpirationPlugin({ maxEntries: TILE_MAX, purgeOnQuotaError: true })
+    ]
   })
 );
 

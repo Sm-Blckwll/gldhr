@@ -28,7 +28,7 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
     const dateParam = params.get('date');
 
     const mapOptions = {
-        minZoom: 3,
+        minZoom: 4,
         maxZoom: 18,
         center: [51.505, -0.09],
         zoom: 5,
@@ -43,10 +43,10 @@ const isMobileLayout = () => window.matchMedia('(max-width: 899px) and (min-heig
 
     const zParam = parseFloat(params.get('z'));
     const webglOk = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } })();
-    const startOnGlobe = webglOk && (!hasPos || zParam < 4);
+    const startOnGlobe = webglOk && (!hasPos || zParam < 5);
     let globeOn = false, gl = null;
     if (startOnGlobe) {
-        mapOptions.zoom = 4;
+        mapOptions.zoom = 5;
         if (!hasPos) mapOptions.center = [51.5074, -0.1278];
     }
 
@@ -1017,21 +1017,8 @@ void main() {
     let tourQueued = false, tourOpen = false;
     let welcomeOpener = null;
 
-    const welcomeVideo = el('welcomeVideo');
-    const welcomeVideoAllowed = !(reducedMotion() || (navigator.connection && navigator.connection.saveData));
-    if (welcomeVideoAllowed) {
-        const showWelcomeVideo = () => welcomeVideo.classList.remove('is-loading');
-        if (welcomeVideo.readyState < 2) {
-            welcomeVideo.classList.add('is-loading');
-            ['loadeddata', 'canplay', 'playing', 'error'].forEach(ev => welcomeVideo.addEventListener(ev, showWelcomeVideo, { once: true }));
-            setTimeout(showWelcomeVideo, 6000);
-        }
-    } else {
-        welcomeVideo.pause();
-        welcomeVideo.removeAttribute('src');
-        welcomeVideo.load();
-        welcomeVideo.parentElement.classList.add('no-video');
-    }
+    const welcomeImage = el('welcomeImage');
+    if (welcomeImage) welcomeImage.addEventListener('error', () => welcomeImage.parentElement.classList.add('no-video'), { once: true });
 
     function openWelcome(opener) {
         welcomeOpener = opener || null;
@@ -1039,7 +1026,6 @@ void main() {
         appRoot.setAttribute('inert', '');
         el('toast').setAttribute('inert', '');
         requestAnimationFrame(() => welcome.classList.add('open'));
-        if (welcomeVideoAllowed) { const pr = welcomeVideo.play(); if (pr && pr.catch) pr.catch(() => {}); }
         refreshConsentUI();
         focusWelcome();
     }
@@ -1049,7 +1035,7 @@ void main() {
         welcome.classList.remove('open');
         appRoot.removeAttribute('inert');
         el('toast').removeAttribute('inert');
-        setTimeout(() => { welcome.hidden = true; welcomeVideo.pause(); }, reducedMotion() ? 0 : 320);
+        setTimeout(() => { welcome.hidden = true; }, reducedMotion() ? 0 : 320);
         if (welcomeOpener && welcomeOpener.focus) welcomeOpener.focus({ preventScroll: true });
         maybeStartTour();
         supportWelcomeClosed();
@@ -2542,12 +2528,12 @@ void main() {
     }, true);
 
     const GLOBE = {
-        JS: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
-        CSS: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css',
-        TO_FLAT: 3,
-        FLAT_MIN: 4,
-        WARM: 2.4,
-        ENTER_TO: 2,
+        JS: 'lib/maplibre-gl/maplibre-gl.js',
+        CSS: 'lib/maplibre-gl/maplibre-gl.css',
+        TO_FLAT: 4,
+        FLAT_MIN: 5,
+        WARM: 3.4,
+        ENTER_TO: 3,
         FADE_MS: 250,
         CAP_N: '#0f4f60', CAP_S: '#f5f8fe', CAP_LAT: 80,
         DROP_MS: 60000,
@@ -2556,7 +2542,7 @@ void main() {
     const appEl = el('app'), globeEl = el('globe');
     let glLoading = null, glDropTimer = null, glEntering = false, glSyncing = false, glQuietUntil = 0, glNightUrl = '', glZoom = 2;
 
-    const globeFitZoom = lat => Math.max(0.2, Math.min(2.2, 1.9 + Math.log2(Math.min(window.innerWidth * 0.84, window.innerHeight * 0.75) * Math.cos(lat * Math.PI / 180) / 469)));
+    const globeFitZoom = lat => Math.max(0, Math.min(GLOBE.TO_FLAT - 1, Math.floor((window.innerWidth < 700 ? 3.15 : 2.15) + Math.log2(Math.min(window.innerWidth * 1.05, window.innerHeight * 1.3) * Math.cos(lat * Math.PI / 180) / 469))));
     const globeUrlZoom = () => (Math.min(GLOBE.TO_FLAT, gl ? gl.getZoom() : glZoom) + 1).toFixed(1);
 
     function loadGlobeLib() {

@@ -697,7 +697,7 @@ a.menu-item { text-decoration: none; }
   mask-image: var(--welcome-fade);
 }
 .welcome-video { position: absolute; inset: 0; width: 100%; height: 100%; }
-.welcome-video { object-fit: cover; object-position: var(--welcome-video-pos); opacity: 1; transition: opacity 0.6s ease; }
+.welcome-video { object-fit: cover; object-position: center top; opacity: 1; transition: opacity 0.6s ease; }
 .welcome-video.is-loading { opacity: 0; }
 .welcome-noise {
   position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
