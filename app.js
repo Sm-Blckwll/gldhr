@@ -1016,9 +1016,8 @@ void main() {
     const appRoot = el('app');
     let tourQueued = false, tourOpen = false;
     let welcomeOpener = null;
-
-    const welcomeImage = el('welcomeImage');
-    if (welcomeImage) welcomeImage.addEventListener('error', () => welcomeImage.parentElement.classList.add('no-video'), { once: true });
+    const loadVeil = el('loadVeil');
+    if (loadVeil) loadVeil.addEventListener('animationend', () => loadVeil.remove(), { once: true });
 
     function openWelcome(opener) {
         welcomeOpener = opener || null;
@@ -2734,7 +2733,8 @@ void main() {
         glZoom = zoom;
         if (!ease) appEl.classList.add('globe-on');
         updateZoomButtons();
-        loadGlobeLib().then(() => {
+        const afterPaint = () => new Promise(ok => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 1000); });
+        loadGlobeLib().then(() => (ease || gl ? null : afterPaint())).then(() => {
             if (!globeOn) return;
             glEntering = !!ease;
             if (!gl) makeGlobe(c, zoom);

@@ -108,11 +108,19 @@
 <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="dns-prefetch" href="https://tiles.openfreemap.org">
 <link rel="preload" href="/fonts/notosans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <style>    html { background: #000; }
+    .load-veil { position: fixed; inset: 0; z-index: 1250; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, #0a1322 0%, #04070d 55%, #000 100%); animation: loadVeil 0.4s ease 1.1s forwards; }
+    @keyframes loadVeil { to { opacity: 0; visibility: hidden; } }
+    @media (prefers-reduced-motion: reduce) { .load-veil { animation-duration: 0s; animation-delay: 0.5s; } }
+    .leaflet-control-geocoder .leaflet-control-geocoder-form,
+    .leaflet-control-geocoder-expanded .leaflet-control-geocoder-toggle { display: none; }
+    .leaflet-control-geocoder-expanded .leaflet-control-geocoder-form { display: block; position: relative; }
+</style>
+  <link rel="stylesheet" href="lib/leaflet/leaflet.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="lib/leaflet/leaflet.css"></noscript>
+  <link rel="stylesheet" href="base.css" />
   <link rel="preload" href="lib/maplibre-gl/maplibre-gl.css" as="style">
   <link rel="preload" href="lib/maplibre-gl/maplibre-gl.js" as="script" fetchpriority="low">
-  <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
-  <link rel="stylesheet" href="Control.OSMGeocoder.css" />
-  <link rel="stylesheet" href="base.css" />
   <script defer src="lib/leaflet/leaflet.js"></script>
   <script defer src="Control.OSMGeocoder.js"></script>
   <script defer src="suncalc.js"></script>
@@ -124,6 +132,7 @@
 </head>
 
 <body>
+  <div id="loadVeil" class="load-veil" aria-hidden="true"></div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <filter id="liquid-glass" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
@@ -384,12 +393,10 @@
 
   <div id="welcome" class="welcome open" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
     <div class="welcome-sheet glass">
-      <div class="welcome-media" aria-hidden="true">
-        <img id="welcomeImage" class="welcome-video" src="background_hero.webp" alt="" width="1080" height="1920" decoding="async" fetchpriority="high">
-      </div>
+      <div class="welcome-media" aria-hidden="true"></div>
       <div class="welcome-noise" aria-hidden="true"></div>
       <div class="welcome-body">
-        <p class="welcome-ver">v4.2.4 <span aria-hidden="true">&#10024;</span></p>
+        <p class="welcome-ver">v4.2.5 <span aria-hidden="true">&#10024;</span></p>
         <h2 id="welcomeTitle">Golden Hour Map</h2>
         <p class="welcome-desc">Find the golden hour for any location, free with no ads.<span class="sr-only"> Made for photographers and filmmakers.</span></p>
       </div>

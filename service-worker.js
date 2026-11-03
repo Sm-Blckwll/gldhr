@@ -1,4 +1,4 @@
-const CACHE = "pwabuilder-GHM-v4.2.4";
+const CACHE = "pwabuilder-GHM-v4.2.5";
 const ASSET_CACHE = CACHE + "-assets";
 const TILE_CACHE = CACHE + "-tiles";
 const TILE_MAX = 1500;
@@ -14,7 +14,6 @@ const PRECACHE_OWN = [
   "/suncalc.js",
   "/geolet.js",
   "/Control.OSMGeocoder.js",
-  "/Control.OSMGeocoder.css",
   "/manifest.json",
   "/magnifying-glass-solid.svg",
   "/favicon-32x32.png",
@@ -41,8 +40,7 @@ const PRECACHE_LIB = [
   "/lib/moment-timezone/moment-timezone-with-data.min.js",
   "/lib/tz-lookup/tz.js",
   "/lib/maplibre-gl/maplibre-gl.css",
-  "/lib/maplibre-gl/maplibre-gl.js",
-  "/background_hero.webp"
+  "/lib/maplibre-gl/maplibre-gl.js"
 ];
 
 const TILE_HOSTS = ["server.arcgisonline.com"];
